@@ -1,0 +1,127 @@
+{
+  "instructions_binary": [
+    {
+      "Address": "0x0",
+      "Label": "cr_initArduino",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x2",
+      "Label": "cr_digitalRead",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x4",
+      "Label": "cr_pinMode",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x6",
+      "Label": "cr_digitalWrite",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x8",
+      "Label": "cr_analogRead",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0xa",
+      "Label": "cr_analogReadResolution",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0xc",
+      "Label": "cr_analogWrite",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0xe",
+      "Label": "cr_abs",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x10",
+      "Label": "cr_max",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x12",
+      "Label": "cr_min",
+      "loaded": "1000000010000010",
+      "globl": true
+    },
+    {
+      "Address": "0x14",
+      "Label": "cr_pow",
+      "loaded": "1000000010000010",
+      "globl": true
+    }
+  ],
+  "instructions_tag": [
+    {
+      "tag": "cr_initArduino",
+      "addr": 0,
+      "globl": true
+    },
+    {
+      "tag": "cr_digitalRead",
+      "addr": 2,
+      "globl": true
+    },
+    {
+      "tag": "cr_pinMode",
+      "addr": 4,
+      "globl": true
+    },
+    {
+      "tag": "cr_digitalWrite",
+      "addr": 6,
+      "globl": true
+    },
+    {
+      "tag": "cr_analogRead",
+      "addr": 8,
+      "globl": true
+    },
+    {
+      "tag": "cr_analogReadResolution",
+      "addr": 10,
+      "globl": true
+    },
+    {
+      "tag": "cr_analogWrite",
+      "addr": 12,
+      "globl": true
+    },
+    {
+      "tag": "cr_abs",
+      "addr": 14,
+      "globl": true
+    },
+    {
+      "tag": "cr_max",
+      "addr": 16,
+      "globl": true
+    },
+    {
+      "tag": "cr_min",
+      "addr": 18,
+      "globl": true
+    },
+    {
+      "tag": "cr_pow",
+      "addr": 20,
+      "globl": true
+    }
+  ]
+}
