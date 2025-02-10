@@ -1,6 +1,7 @@
-####################################################################
-#########CREATOR aux library 4  ARDUINO proyects in RISC V #########
-####################################################################
+####################################################
+#               CREATINO LIBRARY                   #
+#               BY ELISA UTRILLA                   #
+####################################################
 # Variables comunes a utilizar en Arduino
 # Definiciones de constantes globales
 .equ LED_BUILTIN, 30        # Define LED_BUILTIN como 30

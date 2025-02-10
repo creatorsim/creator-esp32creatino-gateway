@@ -44,11 +44,11 @@ def check_build(file_in):
     for line in fin:
       data = line.strip().split()
       if (len(data) > 0):
+        global BUILD_PATH
         if (data[0] == '#ARDUINO'):
           print("#### ARDUINO ####\n")
-          global BUILD_PATH
           BUILD_PATH = './creatino'
-          print("#### CHANGED PATHS ####\n")
+          print("#### CHANGED PATHS ####\n")  
         continue 
     fin.close()
     return 0  
@@ -199,22 +199,24 @@ def do_flash_request(request):
     text_file = open("tmp_assembly.s", "w")
     ret = text_file.write(asm_code)
     text_file.close()
-
+    global BUILD_PATH
+    BUILD_PATH = './creator'
     # check assembly file to see if it is an Arduino program
     error = check_build('tmp_assembly.s')
 
     # transform th temporal assembly file
     filename= BUILD_PATH + '/main/program.s'
-    print("filename to transform: ", filename)
+    print("filename to transform in do_flash_request: ", filename)
     error = creator_build('tmp_assembly.s', filename)
     if error != 0:
       req_data['status'] += 'Error adapting assembly file...\n'
 
     # flashing steps...
-    if error == 0:
-      error = do_cmd(req_data, ['idf.py',  'fullclean'])
-    """if error == 0:
-      error = do_cmd(req_data, ['idf.py',  'set-target', target_board])"""   
+    if error == 0 and BUILD_PATH == './creator':
+      error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
+    if error == 0 and BUILD_PATH == './creator':
+      error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board]) 
+
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
     if error == 0:
@@ -232,7 +234,7 @@ def do_monitor_request(request):
     req_data = request.get_json()
     target_device      = req_data['target_port']
     req_data['status'] = ''
-
+    error = check_build('tmp_assembly.s')
     do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])
 
   except Exception as e:
@@ -254,25 +256,25 @@ def do_job_request(request):
     text_file = open("tmp_assembly.s", "w")
     ret = text_file.write(asm_code)
     text_file.close()
-
+    error = check_build('tmp_assembly.s')
     # transform th temporal assembly file
     filename= BUILD_PATH + '/main/program.s'
-    print("filename to transform: ", filename)
+    print("filename to transform in do_job_request: ", filename)
     error = creator_build('tmp_assembly.s', filename)
     if error != 0:
         req_data['status'] += 'Error adapting assembly file...\n'
 
     # flashing steps...
-    if error == 0:
+    if error == 0 and BUILD_PATH == './creator':
       error = do_cmd_output(req_data, ['idf.py',  'fullclean'])
-    """if error == 0:
-      error = do_cmd_output(req_data, ['idf.py',  'set-target', target_board])"""
+    """if error == 0 and BUILD_PATH = './creator':
+      error = do_cmd_output(req_data, ['idf.py',  'set-target', target_board])""" 
+
     if error == 0:
-      error = do_cmd(req_data, ['idf.py',  '-DIDF_TARGET=', target_board, 'reconfigure'])    
+      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
     if error == 0:
-      error = do_cmd_output(req_data, ['idf.py', 'build'])
-    if error == 0:
-      error = do_cmd_output(req_data, ['idf.py', '-p', target_device, 'flash'])
+      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH, '-p', target_device, 'flash'])
+
     if error == 0:
       error = do_cmd_output(req_data, ['./gateway_monitor.sh', target_device, '50'])
       error = do_cmd_output(req_data, ['cat', 'monitor_output.txt'])

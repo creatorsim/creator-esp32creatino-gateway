@@ -1,3 +1,7 @@
+####################################################
+# CREATINO EXAMPLE: Hello World in monitor         #
+#               BY ELISA UTRILLA                   #
+####################################################
 .data
     .align 2 
     msg: .string "Hola Mundo"

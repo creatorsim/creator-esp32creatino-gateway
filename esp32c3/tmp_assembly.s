@@ -1,3 +1,8 @@
+####################################################
+# CREATINO EXAMPLE: Playing with binary operations #
+#               BY ELISA UTRILLA                   #
+####################################################      
+
 #ARDUINO
 .text
 setup:

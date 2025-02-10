@@ -1,3 +1,9 @@
+####################################################
+# CREATINO EXAMPLE: Blink the integrated LED       #
+#               BY ELISA UTRILLA                   #
+####################################################      
+
+#ARDUINO
 .data
     delay:
         .word 1000
