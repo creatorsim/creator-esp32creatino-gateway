@@ -1,7 +1,6 @@
-####################################################
-#               CREATINO LIBRARY                   #
-#               BY ELISA UTRILLA                   #
-####################################################
+####################################################################
+#########CREATOR aux library 4  ARDUINO proyects in RISC V #########
+####################################################################
 # Variables comunes a utilizar en Arduino
 # Definiciones de constantes globales
 .equ LED_BUILTIN, 30        # Define LED_BUILTIN como 30
@@ -685,19 +684,20 @@ cr_serial_parseFloat: #TODO
     addi sp, sp, 4*/
     jr ra
 
-.globl cr_serial_print2
-.extern aux_serial_print
-cr_serial_print2: 
+.globl cr_serial_printf
+.extern aux_serial_printf
+cr_serial_printf: #Only Char
     addi sp, sp, -4      
     sw ra, 0(sp)     # Guardar el valor de ra (return address)
-    jal ra,aux_serial_print
+    jal ra,aux_serial_printf
     lw ra, 0(sp)     # Recupera el valor de ra
     addi sp, sp,4 
-    jr ra    
+    jr ra             
 
                  
 .globl cr_serial_print 
-cr_serial_print:
+cr_serial_print: #Needs Format
+    li a7, 4
     #Watch out if its an int
     /*mv t0,a0
     addi sp, sp, -4      
@@ -839,63 +839,15 @@ cr_serial_parseInt: #Lee números
     ret    
 
 .globl cr_serial_read
+.extern serial_read
 cr_serial_read: #Lee números
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)          # Guardar el registro RA en el stack 
-    li a7, 12
-    addi sp, sp, -128
-    sw x1,  120(sp)
-    sw x3,  112(sp)
-    sw x4,  108(sp)
-    sw x5,  104(sp)
-    sw x6,  100(sp)
-    sw x7,  96(sp)
-    sw x8,  92(sp)
-    sw x9,  88(sp)
-    sw x18, 52(sp)
-    sw x19, 48(sp)
-    sw x20, 44(sp)
-    sw x21, 40(sp)
-    sw x22, 36(sp)
-    sw x23, 32(sp)
-    sw x24, 28(sp)
-    sw x25, 24(sp)
-    sw x26, 20(sp)
-    sw x27, 16(sp)
-    sw x28, 12(sp)
-    sw x29, 8(sp)
-    sw x30, 4(sp)
-    sw x31, 0(sp)
-    jal _myecall
-    lw x1,  120(sp)
-    lw x3,  112(sp)
-    lw x4,  108(sp)
-    lw x5,  104(sp)
-    lw x6,  100(sp)
-    lw x7,  96(sp)
-    lw x8,  92(sp)
-    lw x9,  88(sp)
-    lw x18, 52(sp)
-    lw x19, 48(sp)
-    lw x20, 44(sp)
-    lw x21, 40(sp)
-    lw x22, 36(sp)
-    lw x23, 32(sp)
-    lw x24, 28(sp)
-    lw x25, 24(sp)
-    lw x26, 20(sp)
-    lw x27, 16(sp)
-    lw x28, 12(sp)
-    lw x29, 8(sp)
-    lw x30, 4(sp)
-    lw x31, 0(sp)
-    addi sp, sp, 128
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4       # Liberar el espacio del stack
+    addi sp, sp, -4      
+    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    jal ra,serial_read
+    lw ra, 0(sp)     # Recupera el valor de ra
+    addi sp, sp, 4
+    ret
 
-    add t0, a0, zero
-    jr ra
-    ret    
 .globl aux_readBytes
 aux_readBytes: #Serial.readBytes(buffer, length) lee letras
     #la a0, space 
@@ -961,19 +913,19 @@ aux_readBytes: #Serial.readBytes(buffer, length) lee letras
     ret
 .global cr_serial_readBytes   
 cr_serial_readBytes:
-    li a2,0 #Searches until it founds a \0 char
     addi sp, sp, -4      
     sw ra, 0(sp)     # Guardar el valor de ra (return address)
-    jal ra,aux_readBytes
+    jal ra,serial_readBytes
     lw ra, 0(sp)     # Recupera el valor de ra
     addi sp, sp, 4
     ret    
-.global cr_serial_readBytesUntil    
+.global cr_serial_readBytesUntil 
+.extern serial_readBytesUntil   
 cr_serial_readBytesUntil:
     #Searches until it founds the char in a2
     addi sp, sp, -4      
     sw ra, 0(sp)     # Guardar el valor de ra (return address)
-    jal ra,aux_readBytes
+    jal ra,serial_readBytesUntil
     lw ra, 0(sp)     # Recupera el valor de ra
     addi sp, sp, 4
     ret

@@ -1,7 +1,3 @@
-/*####################################################
-  #               CREATINO LIBRARY                   #
-  #               BY ELISA UTRILLA                   #
-  ####################################################*/
 #include <stdio.h>
 #include <string.h>
 #include "sdkconfig.h"
@@ -22,14 +18,8 @@ uint32_t timeout_ms = portMAX_DELAY; //By default wait forever
 // Define the timeout in milliseconds
 
 
-extern "C" int __attribute__((aligned(4))) serial_begin(int baudrate) {
-    esp_err_t err = uart_set_baudrate((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, (uint32_t)baudrate);
-    if (err == ESP_OK) {
-        return 0;
-    } else {
-        ESP_LOGE("UART", "Error al inicializar");
-        return 1;
-    }
+extern "C" void serial_begin(int baudrate) {
+    Serial.begin(baudrate);
 }
 extern "C" void serial_end() { 
     Serial.end();   
@@ -76,7 +66,7 @@ extern "C" int serial_find(const char *target) {
     return -1;
 }
 
-extern "C" int serial_findUntil(const char *target, char terminator)  {
+extern "C" bool serial_findUntil(const char *target, char terminator)  {
     uint8_t data[BUFFER_SIZE];
     int total_read = 0;
 
@@ -123,16 +113,18 @@ extern "C" int serial_findUntil(const char *target, char terminator)  {
         return 0;
     }
 }*/
-extern "C" int serial_availableForWrite() {
-    uint32_t tx_fifo_size = 128;  
-    uint32_t tx_fifo_count = UART0.status.txfifo_cnt;  
-    uint32_t tx_fifo_free = tx_fifo_size - tx_fifo_count;  
-    return (int) tx_fifo_free;
+extern "C" int serial_availableForWrite() {  
+    return (int) Serial.availableForWrite();
 }
-extern "C" int serial_available() {
+/*extern "C" int serial_available() {
     size_t rx_bytes;
     uart_get_buffered_data_len((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, &rx_bytes); 
     return (int)rx_bytes;
+
+}*/
+extern "C" int serial_available() {
+    int result = Serial.available();
+    return result;
 
 }
 extern "C" int serial_peek() { 
@@ -140,8 +132,8 @@ extern "C" int serial_peek() {
     return data;  // Devuelve la cantidad de bytes escritos
 }
 extern "C" int serial_write(const uint8_t *val, int len) { //Obligo al usuario a pasar el elemento y la longitud
-    size_t bytes = uart_write_bytes((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, val, len);
-    return (int)bytes;  // Devuelve la cantidad de bytes escritos
+    int result = Serial.write(val, len);
+    return result;  // Devuelve la cantidad de bytes escritos
 }
 extern "C" long aux_map(long value,long fromLow,long fromHigh,long toLow,long toHigh) { 
     long result = map(value, fromLow, fromHigh, toLow, toHigh);
@@ -153,13 +145,33 @@ extern "C" int aux_constrain(int valueToConstrain, int lowerEnd, int UpperEnd) {
     return result;
 }
 
+/*
 extern "C" int aux_serial_print(char *value) { 
     int result = 0;
-    if (Serial.available() > 0) {
-        result = Serial.print(value);
-    }
+    Serial.begin(115200);
+    result = Serial.print(value);
     return result;
 }
+*/
+extern "C" int aux_serial_printf(const char *format, ...) { 
+    //printf(format);
+    char buffer[128];  // Buffer para almacenar la cadena formateada
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);  // Formatear texto
+    va_end(args);
+    //printf(buffer);  // Enviar el mensaje formateado a Serial
+    size_t result = Serial.print(buffer);
+
+    return result ;  // Enviar el mensaje formateado a Serial
+}
+
+
+extern "C" void aux_printchar(void *value) { 
+    Serial.begin(115200);
+    Serial.print((char*)value);
+}
+
 /*extern "C" int aux_numero(char *str) { 
     // Iterar sobre cada carácter de la cadena
     while (*str != '\0') {
@@ -179,16 +191,26 @@ extern "C" int aux_serial_print(char *value) {
     return 1;
 }*/
 
-extern "C" int serial_setTimeout(int timeout) {
-    size_t rx_bytes;
-    esp_err_t err = uart_set_rx_timeout((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, (const uint8_t) timeout); 
-    if (err == ESP_OK) {
-        timeout_ms = timeout;
-        return 0;
-    } else {
-        ESP_LOGE("UART", "Error al poner un timeout");
-        return 1;
-    }
+extern "C" void serial_setTimeout(int timeout) {
+    Serial.setTimeout(timeout);
+
+}
+extern "C" int serial_read() {
+    size_t result = Serial.read();
+    vTaskDelay(1);
+    return (int)result;
+
+}
+extern "C" int serial_readBytes(char *buffer, int length) {
+    size_t result = Serial.readBytes(buffer, length);
+    vTaskDelay(1);
+    return (int)result;
+
+}
+extern "C" int serial_readBytesUntil(char character, char *buffer, int length) {
+    size_t result = Serial.readBytesUntil(character, buffer, length);
+    vTaskDelay(1);
+    return (int)result;
 
 }
 extern "C" int cr_micros() {
