@@ -4,30 +4,23 @@
 #
 
 .text
-#ARDUINO
 main:
-    addi sp, sp, -4
-    sw ra, 0(sp)
 
-    li   a0, 23
-    li   a1, -77
-    li   a2, 45
-    jal  x1, sum
-    jal  x1, sub
-    li   a7, 1
+    li t0, 10
+    li t1, 13
+    li t2, 45
+    li t3, 33
+
+    add t4, t0, t1  # 10+13
+    sub t4, t2, t3  # 45-33
+    mul t4, t3, t3  # 33*33
+    div t4, t2, t0  # 45/10
+    
+    # print  last t4
+    mv a0, t4
+    li a7, 1
     ecall
-
-    lw ra, 0(sp)
-    addi sp, sp, 4
+   
+    # return 
     jr ra
 
-sum:
-    add  t1, a0, a1
-    add  t2, a2, a2
-    add  a0, t1, zero
-    add  a1, t2, zero
-    jr   ra  
-
-sub:
-    sub a0, a0, a1
-    jr ra
