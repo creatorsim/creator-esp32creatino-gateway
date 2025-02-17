@@ -1,0 +1,2 @@
+source /home/elisa/dual_CREATOR_driver/esp32c3/creatino/build/gdbinit/symbols
+source /home/elisa/dual_CREATOR_driver/esp32c3/gbdscript _creatino.gdb

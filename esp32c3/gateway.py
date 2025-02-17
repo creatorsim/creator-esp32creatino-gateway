@@ -28,6 +28,48 @@ import threading
 
 BUILD_PATH = './creator' #By default we call the classics ;)
 
+class GDBExceptionError(Exception):
+    """Excepción personalizada para errores de GDB."""
+    pass
+
+def monitor_gdb_output(req_data, cmd_args):
+    try:
+        # Ejecutar el comando idf.py con GDB
+        process = subprocess.Popen(
+            cmd_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        # Leer la salida y error
+        stdout, stderr = process.communicate()
+
+        # Verificar si se ha lanzado un error específico
+        if "OpenOCD already running" in stderr: #Ya está corriendo
+            print("OpenOCD ya está corriendo.")
+            pass
+        if "terminate called after throwing an instance of 'gdb_exception_error'" in stderr:
+            print("Error: GDB lanzó una excepción.")
+
+        # Aquí podrías hacer más verificaciones o procesar la salida
+        if stdout:
+            print("stdout: "+ stdout)
+        if stderr:
+            print("stderr: "+stderr)
+        
+        # Verificar el código de salida del proceso
+        return process.returncode  # Verificar si el proceso terminó correctamente
+
+    except GDBExceptionError as gdb_error:
+        print(f"GDB Error: {str(gdb_error)}")
+        req_data['status'] += f"GDB Error: {str(gdb_error)}\n"
+        return False
+    except Exception as e:
+        print(f"Error inesperado: {str(e)}")
+        req_data['status'] += f"Error: {str(e)}\n"
+        return False
+
 
 # (1) Get form values
 def do_get_form(request):
@@ -155,6 +197,8 @@ def creator_build(file_in, file_out):
     print("Error adapting assembly file: ", str(e))
     return -1
 
+
+
 def do_cmd(req_data, cmd_array):
     """
     Execute a command and handle the output.
@@ -162,7 +206,8 @@ def do_cmd(req_data, cmd_array):
     try:
         # Execute the command normally
         result = subprocess.run(cmd_array, capture_output=False, timeout=120, check=True)    
-    except:
+    except subprocess.CalledProcessError as e:
+        print(e)
         pass
 
     if result.stdout != None:
@@ -241,7 +286,7 @@ def do_monitor_request(request):
       ###-------------------------------------------
       try:
         thread = threading.Thread(
-            target=do_cmd_output,
+            target=monitor_gdb_output,
             args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd']),
             daemon=True
         )
@@ -256,14 +301,15 @@ def do_monitor_request(request):
         else:
             print("Error: OpenOCD no se inició correctamente.")
       except Exception as e:
-        print("OpenOCD")
+        print("OpenOCD:"+str(e))
         req_data['status'] += str(e) + '\n'
 
       time.sleep(5)
       try:
+        route = BUILD_PATH + '/gdbinit'
         threadGBD = threading.Thread(
-            target=do_cmd_output,
-            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui']),
+            target=monitor_gdb_output,
+            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route]),
             daemon=True
         )
         threadGBD.start()
@@ -271,19 +317,19 @@ def do_monitor_request(request):
 
         # Esperar a que OpenOCD realmente arranque
         time.sleep(2)
-        print("Verificando OpenOCD...")
+        print("Verificando GDB...")
         if threadGBD.is_alive():
             print("GBD está corriendo.")
         else:
             print("Error: GDB no se inició correctamente.")
       except Exception as e:
-        print("GDBGUI")
+        print("GDBGUI:"+str(e))
         req_data['status'] += str(e) + '\n'     
       #if error == 0:
         #error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])     
 
   except Exception as e:
-    req_data['status'] += str(e) + '\n'
+    print(e)
 
   return jsonify(req_data)
 
