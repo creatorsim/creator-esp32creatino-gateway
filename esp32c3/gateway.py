@@ -30,51 +30,60 @@ import select
 BUILD_PATH = './creator' #By default we call the classics ;)
 
 stop_thread = False
+# Diccionario para almacenar el proceso
+process_holder = {}
+def read_output():
+  global process_holder
 
-def read_output(process):
-    global stop_thread
-    while not stop_thread:
-        # Leer stdout
-        output = process.stdout.readline()
-        if output:
-            print(f"Salida estándar: {output.strip()}")
+  while True:
+      # Verificar si los procesos existen antes de acceder a ellos
+      openocd = process_holder.get("openocd")
+      gdbgui = process_holder.get("gdbgui")
 
-        # Leer stderr
-        error_output = process.stderr.readline()
-        if "OpenOCD already running" in error_output:
-            #print(f"Salida de error: {error_output.strip()}")
-            pass
-        elif "Please list all processes to check if OpenOCD is already running" in error_output:
-          commands = "ps aux | grep '[o]penocd' | awk '{print $2}' | xargs kill -9"
-          subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
+      # Si cualquiera de los procesos no está corriendo, salir del bucle
+      if not openocd or not gdbgui:
+          print("No están corriendo los procesos")
+          break
+      # Leer stdout de openocd
+      output = openocd.stdout.readline()
+      print("Reading output...")
+      if output:
+          print(f"Salida estándar: {output.strip()}")
 
-          # Matar procesos de gdbgui
-          commands = "ps aux | grep '[g]dbgui' | awk '{print $2}' | xargs kill -9"
-          subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
-          # Informar del error
-          print(f"Salida de error: {error_output.strip()}.Por favor vuelva a intentarlo")
+      # Leer stderr
+      error_output = openocd.stderr.readline()
+      if error_output:
+          if "OpenOCD already running" in error_output:
+              pass  # No hacer nada si OpenOCD ya está corriendo
+          elif "Please list all processes to check if OpenOCD is already running" in error_output:
+              print("Por favor vuelva a intentarlo")
+          else:
+              print(f"Salida de error: {error_output.strip()}")
 
-
-        elif error_output:
-          print(f"Salida de error: {error_output.strip()}")
-
-        # Comprobar si el proceso ha terminado
-        if process.poll() is not None:
-            break
+      time.sleep(0.1)  # Pequeño delay para evitar consumo excesivo de CPU
 
 
-def monitor_gdb_output(req_data, cmd_args):
+
+
+def monitor_gdb_output(req_data, cmd_args, name):
     try:
         # Ejecutar el comando idf.py con GDB
-        process = subprocess.Popen(
+        global process_holder
+        process_holder[name]  = subprocess.Popen(
             cmd_args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         )
-        return process
+        if process_holder[name].poll() is None:
+            print(f"El proceso {name} sigue corriendo.")
+        else:
+            print(f"El proceso {name} ha terminado.")
+        print(process_holder.keys())
+        return process_holder[name]
     except Exception as e:
         print(f"Error al ejecutar el comando: {e}")
+        process_holder.pop(name, None)  # Eliminar la clave de forma segura si existe
         return None  # Devolver un código de error en caso de fallo
 
 
@@ -277,14 +286,20 @@ def do_flash_request(request):
 
   return jsonify(req_data)
 
+def start_monitoring_thread(req_data):
+  try:
+    print(process_holder.keys())
+    output_thread = threading.Thread(target=read_output, daemon=True)
+    output_thread.start()
+  except Exception as e:
+      req_data['status'] += f"Error starting Monitor: {str(e)}\n"
+      return None
 
-# (3) Run program into the target board
-# Función para iniciar el hilo de OpenOCD
 def start_openocd_thread(req_data):
   try:
     thread = threading.Thread(
         target=monitor_gdb_output,
-        args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd']),
+        args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd'],'openocd'),
         daemon=True
     )
     thread.start()
@@ -299,38 +314,69 @@ def start_gdbgui_thread(req_data):
   try:
     route = BUILD_PATH + '/gdbinit'
     threadGBD = threading.Thread(
-        target=do_cmd_output,
-        args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route]),
+        target=monitor_gdb_output,
+        args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route], 'gdbgui'),
         daemon=True
     )
     threadGBD.start()
-    if threadGBD.is_alive():
-      print("GDBGUI started")
-      return threadGBD
+    return threadGBD
   except Exception as e:
       req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
       return None
 
-def do_monitor_request(request):
+def kill_all_processes(process_name):
     try:
-        req_data = request.get_json()
-        target_device = req_data['target_port']
-        req_data['status'] = ''
-        error = check_build('tmp_assembly.s')
-        
-        if error == 0:
-            # Crear e iniciar el hilo de OpenOCD
-            openocd_thread = start_openocd_thread(req_data)
-            if openocd_thread:
-                # Crear e iniciar el hilo de GDBGUI
-                gdbgui_thread = start_gdbgui_thread(req_data)    
-        else:
-            req_data['status'] += "Build error\n"
-            
-    except Exception as e:
-        req_data['status'] += str(e) + '\n'
-        
-    return jsonify(req_data)
+        # Buscar todos los procesos con el nombre dado
+        commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
+        subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
+        print(f"Todos los procesos {process_name} han sido eliminados.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error al intentar matar los procesos {process_name}: {e}")
+
+def do_monitor_request(request):
+  try:
+      req_data = request.get_json()
+      target_device = req_data['target_port']
+      req_data['status'] = ''
+      
+      error = check_build('tmp_assembly.s')
+
+      if error == 0:
+          # Verificar si 'openocd' y 'gdbgui' existen y matarlos si están en process_holder
+          if 'openocd' in process_holder:
+              print('Killing OpenOCD')
+              #process_holder['openocd'].kill()  # Matar el proceso
+              kill_all_processes("openocd")
+              process_holder.pop('openocd', None)  # Eliminar del diccionario
+
+          if 'gdbgui' in process_holder:
+              print('Killing GDBGUI')
+              #process_holder['gdbgui'].kill()  # Matar el proceso
+              kill_all_processes("gdbgui")
+              process_holder.pop('gdbgui', None)  # Eliminar del diccionario
+
+          # Crear e iniciar el hilo de OpenOCD
+          
+          openocd_thread = start_openocd_thread(req_data)
+          while openocd_thread == None:
+              time.sleep(1)
+          gdbgui_thread = start_gdbgui_thread(req_data)
+          
+          # Esperar hasta que ambos procesos estén en process_holder
+          while not ("gdbgui" in process_holder and "openocd" in process_holder):
+              time.sleep(1)
+          
+          # Crear e iniciar el hilo de monitorización 
+          #print('Starting monitor thread...')
+          #monitor_thread = start_monitoring_thread(req_data)
+      else:
+          req_data['status'] += "Build error\n"
+          
+  except Exception as e:
+      req_data['status'] += str(e) + '\n'
+  
+  return jsonify(req_data)
+
 
 
       #if error == 0:

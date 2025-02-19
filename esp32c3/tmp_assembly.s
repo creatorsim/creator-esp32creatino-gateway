@@ -1,41 +1,38 @@
+####################################################
+# CREATINO EXAMPLE: Hello world                    #
+#               BY ELISA UTRILLA                   #
+####################################################      
 
-#
-# Creator (https://creatorsim.github.io/creator/)
-#
-
+#ARDUINO
 .data
-    w1:     .word 14
-    b1:     .byte 120
+    msg: .string "Hola %s\n"
+    arg: .string "Mundo"
 
-    .align 1
-    h1:     .half 22
-    w2:     .zero 4
-    b2:     .zero 1
-
-    .align 1
-    h2:     .zero 2
 
 .text
+setup:
+    li a0,115200 
+    addi sp, sp, -4      
+    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    jal ra,cr_serial_begin
+    lw ra, 0(sp)     # Recupera el valor de ra
+    addi sp, sp,4 
+
+    la a0, msg
+    la a1, arg
+    addi sp, sp, -16       # Reservar espacio en el stack
+    sw ra, 12(sp)          # Guardar el registro RA en el stack
+    jal ra,cr_serial_printf
+    lw ra, 12(sp)          # Restaurar el registro RA desde el stack
+    addi sp, sp, 16       # Liberar el espacio del stack
+    jr ra
+loop:
+    nop
 main:
-    
-    la t0, w1         # w1 address -> t0
-    la t1, b1         # b1 address -> t1
-    la t2, h1         # h1 address -> t2
-    
-    lw t3,  0(t0)     # Memory[t0] -> t3
-    
-    lb t4,  0(t1)     # Memory[t1] -> t4
-    
-    lh t5, 0 (t2)     # Memory[t2] -> t5
-    
-    la t0, w2         # w2 address -> t0
-    sw t3,  0(t0)     # t3 -> Memory[w2]
-
-    la t0, b2         # b2 address -> t0
-    sb t4, 0(t0)      # t4 -> Memory[b2]
-
-    la t0, h2         # h2 address -> t0
-    sh t5, 0(t0)      # t5 -> Memory[h2]
-   
-    # return 
+    addi sp, sp, -16       # Reservar espacio en el stack
+    sw ra, 12(sp)          # Guardar el registro RA en el stack
+    jal ra, cr_initArduino
+    jal ra,setup
+    lw ra, 12(sp)          # Restaurar el registro RA desde el stack
+    addi sp, sp, 16       # Liberar el espacio del stack
     jr ra
