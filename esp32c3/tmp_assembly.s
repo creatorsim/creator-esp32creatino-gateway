@@ -1,38 +1,41 @@
 
-#ARDUINO
-.data
-    .align 2 
-    msg: .string "Hola Mundo"
-    	.align 4
-    delay: .word 3000
-.text
-setup:
-    #Serial.println("Hola Mundo")
-    la a0, msg
-    addi sp, sp, -16       # Reservar espacio en el stack
-    sw ra, 12(sp)          # Guardar el registro RA en el stack
-    li a7,4
-    jal ra,cr_serial_print
-    lw ra, 12(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 16       # Liberar el espacio del stack
-    #delay(3000000)
-    la a0, delay
-    lw a0, 0(a0)
-    addi sp, sp, -16      
-    sw ra, 12(sp)
-    jal ra, cr_delay
-    lw ra, 12(sp)          
-    addi sp, sp, 16
+#
+# Creator (https://creatorsim.github.io/creator/)
+#
 
-    jr ra
+.data
+    w1:     .word 14
+    b1:     .byte 120
+
+    .align 1
+    h1:     .half 22
+    w2:     .zero 4
+    b2:     .zero 1
+
+    .align 1
+    h2:     .zero 2
+
+.text
 main:
-    #call initArduino    #Llamada a una función que inicializa el hardware necesario (esto lo deberías implementar)
-    #call setup          #Configura el pin de salida
-    addi sp, sp, -16       # Reservar espacio en el stack
-    sw ra, 12(sp)          # Guardar el registro RA en el stack
-    jal ra,setup
-    #jal t0 ,serial_print
-    lw ra, 12(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 16       # Liberar el espacio del stack
-    #addi t0,t0,1
+    
+    la t0, w1         # w1 address -> t0
+    la t1, b1         # b1 address -> t1
+    la t2, h1         # h1 address -> t2
+    
+    lw t3,  0(t0)     # Memory[t0] -> t3
+    
+    lb t4,  0(t1)     # Memory[t1] -> t4
+    
+    lh t5, 0 (t2)     # Memory[t2] -> t5
+    
+    la t0, w2         # w2 address -> t0
+    sw t3,  0(t0)     # t3 -> Memory[w2]
+
+    la t0, b2         # b2 address -> t0
+    sb t4, 0(t0)      # t4 -> Memory[b2]
+
+    la t0, h2         # h2 address -> t0
+    sh t5, 0(t0)      # t5 -> Memory[h2]
+   
+    # return 
     jr ra

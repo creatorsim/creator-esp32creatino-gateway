@@ -29,8 +29,11 @@ import select
 
 BUILD_PATH = './creator' #By default we call the classics ;)
 
+stop_thread = False
+
 def read_output(process):
-    while True:
+    global stop_thread
+    while not stop_thread:
         # Leer stdout
         output = process.stdout.readline()
         if output:
@@ -48,6 +51,9 @@ def read_output(process):
           # Matar procesos de gdbgui
           commands = "ps aux | grep '[g]dbgui' | awk '{print $2}' | xargs kill -9"
           subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
+          # Informar del error
+          print(f"Salida de error: {error_output.strip()}.Por favor vuelva a intentarlo")
+
 
         elif error_output:
           print(f"Salida de error: {error_output.strip()}")
@@ -59,7 +65,6 @@ def read_output(process):
 
 def monitor_gdb_output(req_data, cmd_args):
     try:
-        print('A')
         # Ejecutar el comando idf.py con GDB
         process = subprocess.Popen(
             cmd_args,
@@ -67,18 +72,10 @@ def monitor_gdb_output(req_data, cmd_args):
             stderr=subprocess.PIPE,
             text=True
         )
-        # Crear un hilo para leer la salida
-        output_thread = threading.Thread(target=read_output, args=(process,))
-        output_thread.start()
-
-        # El hilo leerá la salida sin bloquear el proceso principal
-        output_thread.join()  # Esperar a que el hilo termine
-
-        
-    
+        return process
     except Exception as e:
         print(f"Error al ejecutar el comando: {e}")
-        return -1  # Devolver un código de error en caso de fallo
+        return None  # Devolver un código de error en caso de fallo
 
 
 # (1) Get form values
@@ -282,58 +279,62 @@ def do_flash_request(request):
 
 
 # (3) Run program into the target board
-def do_monitor_request(request):
+# Función para iniciar el hilo de OpenOCD
+def start_openocd_thread(req_data):
   try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    req_data['status'] = ''
-    error = check_build('tmp_assembly.s')
-    
-    if error == 0:
-      #error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])
-      ###-------------------------------------------
-      try:
-        thread = threading.Thread(
-            target=monitor_gdb_output,
-            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd']),
-            daemon=True
-        )
-        thread.start()
-        print("Starting thread...")
-
-        # Esperar a que OpenOCD realmente arranque
-        print("Verificando OpenOCD...")
-
-        while(thread.is_alive()==False):
-          time.sleep(1)
-
-        try:
-          route = BUILD_PATH + '/gdbinit'
-          threadGBD = threading.Thread(
-              target=monitor_gdb_output,
-              args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x",route]),
-              daemon=True
-          )
-          threadGBD.start()
-          print("Starting thread...")
-          if threadGBD.is_alive():
-            print ("GBDGUI started")
-        except Exception as e:
-          print("GDBGUI")
-          req_data['status'] += str(e) + '\n'     
-      except Exception as e:
-        print("OpenOCD")
-        req_data['status'] += str(e) + '\n'
-
-      
-      #if error == 0:
-        #error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])     
-
+    thread = threading.Thread(
+        target=monitor_gdb_output,
+        args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd']),
+        daemon=True
+    )
+    thread.start()
+    print("Starting OpenOCD thread...")
+    return thread
   except Exception as e:
-    req_data['status'] += str(e) + '\n'
+    req_data['status'] += f"Error starting OpenOCD: {str(e)}\n"
+    return None
 
-  return jsonify(req_data)
+# Función para iniciar el hilo de GDBGUI
+def start_gdbgui_thread(req_data):
+  try:
+    route = BUILD_PATH + '/gdbinit'
+    threadGBD = threading.Thread(
+        target=do_cmd_output,
+        args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route]),
+        daemon=True
+    )
+    threadGBD.start()
+    if threadGBD.is_alive():
+      print("GDBGUI started")
+      return threadGBD
+  except Exception as e:
+      req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
+      return None
 
+def do_monitor_request(request):
+    try:
+        req_data = request.get_json()
+        target_device = req_data['target_port']
+        req_data['status'] = ''
+        error = check_build('tmp_assembly.s')
+        
+        if error == 0:
+            # Crear e iniciar el hilo de OpenOCD
+            openocd_thread = start_openocd_thread(req_data)
+            if openocd_thread:
+                # Crear e iniciar el hilo de GDBGUI
+                gdbgui_thread = start_gdbgui_thread(req_data)    
+        else:
+            req_data['status'] += "Build error\n"
+            
+    except Exception as e:
+        req_data['status'] += str(e) + '\n'
+        
+    return jsonify(req_data)
+
+
+      #if error == 0:
+        #error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
 
 # (4) Flasing assembly program into target board
 def do_job_request(request):
