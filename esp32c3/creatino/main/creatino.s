@@ -16,6 +16,23 @@
     cr_newline: .byte 0x0A 
 # Variables globales
 .text
+# Sustituto de ecall
+.globl cr_ecall
+.extern ecall_fun 
+cr_ecall:
+    mv a1, a0
+    mv a0, a7
+    addi sp, sp, -4       # Reservar espacio en el stack
+    sw ra, 0(sp)
+    jal ra, ecall_fun
+    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    addi sp, sp, 4      # Liberar el espacio del stack
+    jr ra
+    ret
+
+
+
+
 # Basic TODO)
 .extern initArduino
 .global cr_initArduino
@@ -695,72 +712,7 @@ cr_serial_printf: #Only Char
     jr ra             
 
                  
-.globl cr_serial_print 
-cr_serial_print: #Needs Format
-    li a7, 4
-    #Watch out if its an int
-    /*mv t0,a0
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
-    jal ra,aux_numero 
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
-    mv a7,a0
-    mv a0,t0*/
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)          # Guardar el registro RA en el stack
-    mv a0, a0
-    addi sp, sp, -128
-    sw x1,  120(sp)
-    sw x3,  112(sp)
-    sw x4,  108(sp)
-    sw x5,  104(sp)
-    sw x6,  100(sp)
-    sw x7,  96(sp)
-    sw x8,  92(sp)
-    sw x9,  88(sp)
-    sw x18, 52(sp)
-    sw x19, 48(sp)
-    sw x20, 44(sp)
-    sw x21, 40(sp)
-    sw x22, 36(sp)
-    sw x23, 32(sp)
-    sw x24, 28(sp)
-    sw x25, 24(sp)
-    sw x26, 20(sp)
-    sw x27, 16(sp)
-    sw x28, 12(sp)
-    sw x29, 8(sp)
-    sw x30, 4(sp)
-    sw x31, 0(sp)
-    jal _myecall
-    lw x1,  120(sp)
-    lw x3,  112(sp)
-    lw x4,  108(sp)
-    lw x5,  104(sp)
-    lw x6,  100(sp)
-    lw x7,  96(sp)
-    lw x8,  92(sp)
-    lw x9,  88(sp)
-    lw x18, 52(sp)
-    lw x19, 48(sp)
-    lw x20, 44(sp)
-    lw x21, 40(sp)
-    lw x22, 36(sp)
-    lw x23, 32(sp)
-    lw x24, 28(sp)
-    lw x25, 24(sp)
-    lw x26, 20(sp)
-    lw x27, 16(sp)
-    lw x28, 12(sp)
-    lw x29, 8(sp)
-    lw x30, 4(sp)
-    lw x31, 0(sp)
-    addi sp, sp, 128
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4       # Liberar el espacio del stack
-    jr ra
-    ret
+
 .globl cr_serial_println
 #.extern serial_println     
 cr_serial_println: #TODO

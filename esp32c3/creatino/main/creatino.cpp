@@ -17,6 +17,84 @@
 uint32_t timeout_ms = portMAX_DELAY; //By default wait forever
 // Define the timeout in milliseconds
 
+extern "C" void ecall_print(int option, void* value) { 
+    Serial.begin(115200);
+
+    if (Serial.available()){
+        switch (option)
+        {
+            case 1:
+                // print_int
+                if (value) Serial.print(*static_cast<int*>(value));
+                break;
+            
+            case 4:
+                // print_string
+                if (value) Serial.print(static_cast<const char*>(value));
+                break;
+            
+            case 11:
+                // print_char
+                if (value) Serial.print(*static_cast<char*>(value));
+                break;
+
+            case 10:
+                // exit
+                return;            
+
+            default:
+                Serial.println("Opción no válida");
+                break;
+        }
+    }
+}
+
+extern "C" void ecall_read(int option, void* value, int size = 0) { 
+    Serial.begin(115200);
+
+    if (Serial.available()) {
+        switch (option)
+        {
+            case 5:
+                // read int (devuelve el valor leído)
+                {
+                    int readValue = Serial.parseInt(SKIP_WHITESPACE);
+                    if (value) {
+                        *static_cast<int*>(value) = readValue;  // Asignar el valor leído a la variable apuntada por 'value'
+                    }
+                }
+                break;
+
+            case 8:
+                // read_string  
+                {
+                    if (size > 0) {
+                        char readString[size];
+                        Serial.readBytesUntil('\n', readString, size+1);  // Leer hasta salto de línea
+                        if (value) {
+                            strcpy(static_cast<char*>(value), readString);  // Copiar la cadena leída al puntero 'value'
+                        }
+                    }
+                }   
+                break;
+
+            case 12:
+                // read_char (lee un solo carácter)
+                {
+                    char readChar;
+                    Serial.readBytesUntil('\n', &readChar, 1);  // Leer un solo carácter
+                    if (value) {
+                        *static_cast<char*>(value) = readChar;  // Asignar el carácter leído a la variable apuntada por 'value'
+                    }
+                }
+                break;         
+
+            default:
+                Serial.println("Opción no válida");
+                break;
+        }
+    }
+}
 
 extern "C" void serial_begin(int baudrate) {
     Serial.begin(baudrate);
@@ -25,103 +103,26 @@ extern "C" void serial_end() {
     Serial.end();   
 }
 
-extern "C" int serial_flush() {
-    esp_err_t err = uart_wait_tx_done((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, timeout_ms);
-    if (err == ESP_OK) {
-        return 0;
-    } else {
-        ESP_LOGE("UART", "Error al transmitir datos");
-        return 1;
-    }
+extern "C" void serial_flush() {
+    Serial.flush();
 }
 
-extern "C" int serial_find(const char *target) {
-    uint8_t data[BUFFER_SIZE];
-    int total_read = 0;
-
-    int target_len = strlen(target);
-    uint32_t start_time = esp_log_timestamp();
-
-    while (esp_log_timestamp() - start_time < timeout_ms) {
-        // Leer datos disponibles
-        int len = uart_read_bytes((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, data + total_read, BUFFER_SIZE - total_read, 10 / portTICK_PERIOD_MS);
-        if (len > 0) {
-            total_read += len;
-
-            // Buscar la cadena en los datos leídos
-            if (total_read >= target_len && strstr((char *)data, target) != NULL) {
-                ESP_LOGI(TAG, "Cadena encontrada: %s", target);
-                return 0;
-            }
-
-            // Mover los datos no procesados al inicio del búfer (para evitar pérdidas)
-            if (total_read > target_len) {
-                memmove(data, data + total_read - target_len, target_len);
-                total_read = target_len;
-            }
-        }
-    }
-
-    ESP_LOGI(TAG, "Cadena no encontrada dentro del tiempo de espera.");
-    return -1;
+extern "C" bool serial_find(const char *target) {
+    bool result = Serial.find(target);
+    vTaskDelay(1);
+    return result;
 }
 
-extern "C" bool serial_findUntil(const char *target, char terminator)  {
-    uint8_t data[BUFFER_SIZE];
-    int total_read = 0;
-
-    int target_len = strlen(target);
-    uint32_t start_time = esp_log_timestamp();
-
-    while (esp_log_timestamp() - start_time < timeout_ms) {
-        // Leer datos disponibles
-        int len = uart_read_bytes((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, data + total_read, BUFFER_SIZE - total_read, 10 / portTICK_PERIOD_MS);
-        if (len > 0) {
-            total_read += len;
-
-            // Buscar la cadena en los datos leídos
-            if (total_read >= target_len && strstr((char *)data, target) != NULL) {
-                //ESP_LOGI(TAG, "Founded: %s", target);
-                return 0;
-            }
-            for (int i = 0; i < len; i++) {
-                if (data[total_read - len + i] == terminator) {
-                    //ESP_LOGI(TAG, "Termination founded: %c", terminator);
-                    return 1;  // Terminador encontrado, salir
-                }
-            }
-
-            // Mover los datos no procesados al inicio del búfer (para evitar pérdidas)
-            if (total_read > target_len) {
-                memmove(data, data + total_read - target_len, target_len);
-                total_read = target_len;
-            }
-        }
-    }
-
-    //ESP_LOGI(TAG, "Cadena no encontrada dentro del tiempo de espera.");
-    return 1;
+extern "C" bool serial_findUntil(const char *target, const char *terminator)  {
+    bool result = Serial.findUntil(target, terminator);
+    vTaskDelay(1);
+    return result;
 }
-/*extern "C" int serial_availableForWrite() {
-    size_t free_size;
-    esp_err_t err = uart_get_tx_buffer_free_size((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, &free_size);
-    if (err == ESP_OK) {
-        printf("Hay sitio para escribir: %d bytes\n", (int)free_size);
-        return (int)free_size;
-    } else {
-        ESP_LOGE("UART", "Error al obtener el tamaño del buffer de transmisión libre");
-        return 0;
-    }
-}*/
+
 extern "C" int serial_availableForWrite() {  
     return (int) Serial.availableForWrite();
 }
-/*extern "C" int serial_available() {
-    size_t rx_bytes;
-    uart_get_buffered_data_len((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM, &rx_bytes); 
-    return (int)rx_bytes;
 
-}*/
 extern "C" int serial_available() {
     int result = Serial.available();
     return result;
@@ -145,14 +146,6 @@ extern "C" int aux_constrain(int valueToConstrain, int lowerEnd, int UpperEnd) {
     return result;
 }
 
-/*
-extern "C" int aux_serial_print(char *value) { 
-    int result = 0;
-    Serial.begin(115200);
-    result = Serial.print(value);
-    return result;
-}
-*/
 extern "C" int aux_serial_printf(const char *format, ...) { 
     //printf(format);
     char buffer[128];  // Buffer para almacenar la cadena formateada
@@ -172,25 +165,6 @@ extern "C" void aux_printchar(void *value) {
     Serial.print((char*)value);
 }
 
-/*extern "C" int aux_numero(char *str) { 
-    // Iterar sobre cada carácter de la cadena
-    while (*str != '\0') {
-        printf("Caracter: %c, ASCII: %d\n", *str, *str);
-        if (!isdigit(*str)) {  // Si no es un dígito
-            printf("No es un número\n");
-            return 4;
-        }
-        else{
-            printf("Es un número\n");
-            str++;
-        }
-        
-    }
-
-    // Si todos los caracteres son dígitos, es un número decimal
-    return 1;
-}*/
-
 extern "C" void serial_setTimeout(int timeout) {
     Serial.setTimeout(timeout);
 
@@ -207,12 +181,31 @@ extern "C" int serial_readBytes(char *buffer, int length) {
     return (int)result;
 
 }
+extern "C" long serial_parseInt(LookaheadMode lookahead = LookaheadMode::SKIP_ALL, char ignore = '\0') {
+    long result = Serial.parseInt(lookahead, ignore);
+    vTaskDelay(1);
+    return result;
+}
+
 extern "C" int serial_readBytesUntil(char character, char *buffer, int length) {
     size_t result = Serial.readBytesUntil(character, buffer, length);
     vTaskDelay(1);
     return (int)result;
 
 }
+extern "C" const char* serial_readString() {
+    static char input[100];  // Buffer estático
+    int len = Serial.readBytes(input, sizeof(input) - 1);  // Lee los datos disponibles
+    if (len < 0) {
+        // Error en la lectura
+        return "";
+    }
+    input[len] = '\0';  // Asegúrate de que la cadena termine con '\0'
+    printf("Recibido: %s\n", input);
+    vTaskDelay(3);
+    return input;
+}
+
 extern "C" int cr_micros() {
     return (int)esp_timer_get_time();
 }
