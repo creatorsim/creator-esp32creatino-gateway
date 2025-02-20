@@ -17,6 +17,7 @@
 uint32_t timeout_ms = portMAX_DELAY; //By default wait forever
 // Define the timeout in milliseconds
 
+// ecall de imprimir + exit
 extern "C" void ecall_print(int option, void* value) { 
     Serial.begin(115200);
 
@@ -49,22 +50,26 @@ extern "C" void ecall_print(int option, void* value) {
     }
 }
 
-extern "C" void ecall_read(int option, void* value, int size = 0) { 
+//read_int en ecall
+extern "C" int ecall_read() { 
+    Serial.begin(115200);
+
+    if (Serial.available()) {
+        int readValue = Serial.parseInt(SKIP_WHITESPACE);
+        if (value) {
+            return readValue;  
+        }        
+    }
+    else return 0; // No se leyó nada
+}
+
+// ecall cuando tiene que leer caracteres o cadenas
+extern "C" char* ecall_read(int option, int size = 1) { 
     Serial.begin(115200);
 
     if (Serial.available()) {
         switch (option)
         {
-            case 5:
-                // read int (devuelve el valor leído)
-                {
-                    int readValue = Serial.parseInt(SKIP_WHITESPACE);
-                    if (value) {
-                        *static_cast<int*>(value) = readValue;  // Asignar el valor leído a la variable apuntada por 'value'
-                    }
-                }
-                break;
-
             case 8:
                 // read_string  
                 {
@@ -72,7 +77,7 @@ extern "C" void ecall_read(int option, void* value, int size = 0) {
                         char readString[size];
                         Serial.readBytesUntil('\n', readString, size+1);  // Leer hasta salto de línea
                         if (value) {
-                            strcpy(static_cast<char*>(value), readString);  // Copiar la cadena leída al puntero 'value'
+                            return readString;  // Devolver la cadena leída
                         }
                     }
                 }   
@@ -84,7 +89,7 @@ extern "C" void ecall_read(int option, void* value, int size = 0) {
                     char readChar;
                     Serial.readBytesUntil('\n', &readChar, 1);  // Leer un solo carácter
                     if (value) {
-                        *static_cast<char*>(value) = readChar;  // Asignar el carácter leído a la variable apuntada por 'value'
+                        return readChar;  
                     }
                 }
                 break;         
