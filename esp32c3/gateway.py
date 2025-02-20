@@ -28,6 +28,7 @@ import threading
 import select
 
 BUILD_PATH = './creator' #By default we call the classics ;)
+
 stop_thread = False
 # Diccionario para almacenar el proceso
 process_holder = {}
@@ -54,6 +55,7 @@ def read_output():
         if output:
             logging.info(f"Salida estándar: {output.strip()}")
 
+        # Leer stderr
         error_output = openocd.stderr.readline()
         if error_output:
             if "OpenOCD already running" in error_output:
@@ -401,59 +403,6 @@ def do_flash_request(request):
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH, '-p', target_device, 'flash'])
-
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
-
-  return jsonify(req_data)
-
-# (3) Run program into the target board
-def do_monitor_request(request):
-  try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    req_data['status'] = ''
-    error = check_build('tmp_assembly.s')
-    
-    if error == 0:
-      #error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])
-      ###-------------------------------------------
-      try:
-        thread = threading.Thread(
-            target=monitor_gdb_output,
-            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd']),
-            daemon=True
-        )
-        thread.start()
-        print("Starting thread...")
-
-        # Esperar a que OpenOCD realmente arranque
-        print("Verificando OpenOCD...")
-
-        while(thread.is_alive()==False):
-          time.sleep(1)
-
-        try:
-          route = BUILD_PATH + '/gdbinit'
-          threadGBD = threading.Thread(
-              target=monitor_gdb_output,
-              args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x",route]),
-              daemon=True
-          )
-          threadGBD.start()
-          print("Starting thread...")
-          if threadGBD.is_alive():
-            print ("GBDGUI started")
-        except Exception as e:
-          print("GDBGUI")
-          req_data['status'] += str(e) + '\n'     
-      except Exception as e:
-        print("OpenOCD")
-        req_data['status'] += str(e) + '\n'
-
-      
-      #if error == 0:
-        #error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])     
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
