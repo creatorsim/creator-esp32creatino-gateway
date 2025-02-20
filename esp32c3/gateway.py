@@ -55,7 +55,6 @@ def read_output():
         if output:
             logging.info(f"Salida estándar: {output.strip()}")
 
-        # Leer stderr
         error_output = openocd.stderr.readline()
         if error_output:
             if "OpenOCD already running" in error_output:
