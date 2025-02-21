@@ -48,7 +48,7 @@ def read_output():
 
         # Si cualquiera de los procesos no está corriendo, salir del bucle
         if not openocd or not gdbgui:
-            logging.error("No están corriendo los procesos")
+            #logging.error("No están corriendo los procesos")
             break
         # Leer stdout de openocd
         output = openocd.stdout.readline()
@@ -155,7 +155,7 @@ def kill_all_processes(process_name):
     except subprocess.CalledProcessError as e:
         logging.error(f"Error al intentar matar los procesos {process_name}: {e}")
 
-def do_monitor_request(request):
+def do_debug_request(request):
     try:
         req_data = request.get_json()
         target_device = req_data['target_port']
@@ -197,7 +197,7 @@ def do_monitor_request(request):
             
     except Exception as e:
         req_data['status'] += str(e) + '\n'
-        logging.error(f"Exception in do_monitor_request: {e}")
+        logging.error(f"Exception in do_debug_request: {e}")
     
     return jsonify(req_data)
 
@@ -326,6 +326,20 @@ def creator_build(file_in, file_out):
   except Exception as e:
     print("Error adapting assembly file: ", str(e))
     return -1
+  
+# (3) Run program into the target board
+def do_monitor_request(request):
+  try:
+    req_data = request.get_json()
+    target_device      = req_data['target_port']
+    req_data['status'] = ''
+
+    do_cmd(req_data, ['idf.py', '-p', target_device, 'monitor'])
+
+  except Exception as e:
+    req_data['status'] += str(e) + '\n'
+
+  return jsonify(req_data)  
 
 def do_cmd(req_data, cmd_array):
     """
@@ -489,10 +503,16 @@ def post_flash():
   return do_flash_request(request)
 
 # (3) POST /monitor -> flash
+# OJO!!!!!!! Hasta que no se añada el botón de debug, por ahora este es el de debug
 @app.route("/monitor", methods=["POST"])
 @cross_origin()
+def post_debug():
+  return do_debug_request(request)
+
+"""@app.route("/monitor", methods=["POST"])
+@cross_origin()
 def post_monitor():
-  return do_monitor_request(request)
+  return do_monitor_request(request)"""
 
 # (4) POST /job -> flash + monitor
 @app.route("/job", methods=["POST"])
