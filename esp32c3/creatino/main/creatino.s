@@ -17,7 +17,7 @@
 # Variables globales
 .text
 # Sustituto de ecall
-.globl cr_ecall
+/*.globl cr_ecall
 .extern ecall_fun 
 cr_ecall:
     mv a1, a0
@@ -29,7 +29,7 @@ cr_ecall:
     addi sp, sp, 4      # Liberar el espacio del stack
     jr ra
     ret
-
+*/
 
 
 
@@ -713,7 +713,7 @@ cr_serial_printf: #Only Char
 
                  
 
-.globl cr_serial_println
+/*.globl cr_serial_println
 #.extern serial_println     
 cr_serial_println: #TODO
     addi sp, sp, -4      
@@ -729,7 +729,7 @@ cr_serial_println: #TODO
     jal ra,cr_serial_print 
     lw ra, 0(sp)     # Recupera el valor de ra
     addi sp, sp, 4
-    jr ra 
+    jr ra*/ 
 
 .globl cr_serial_parseInt #ATM Serial.parseint(SKIP_NONE)
 cr_serial_parseInt: #Lee números

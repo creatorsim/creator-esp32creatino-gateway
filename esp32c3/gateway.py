@@ -145,6 +145,21 @@ def start_gdbgui_thread(req_data):
         req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
         logging.error(f"Error starting GDBGUI: {str(e)}")
         return None
+    
+def start_gdbgui_thread(req_data):
+    try:
+        route = BUILD_PATH + '/gdbinit'
+        threadGBD = threading.Thread(
+            target=monitor_gdb_output,
+            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route], 'gdbgui'),
+            daemon=True
+        )
+        threadGBD.start()
+        return threadGBD
+    except Exception as e:
+        req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
+        logging.error(f"Error starting GDBGUI: {str(e)}")
+        return None    
 
 def kill_all_processes(process_name):
     try:
@@ -190,7 +205,9 @@ def do_debug_request(request):
             monitor_thread = start_monitoring_thread(req_data)
             if monitor_thread is None:
                 req_data['status'] += "Error starting monitor thread\n"
-            print("Monitor thread started")    
+            print("Monitor thread started")
+
+            do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])  
         else:
             req_data['status'] += "Build error\n"
             

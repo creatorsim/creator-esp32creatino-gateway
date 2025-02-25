@@ -18,7 +18,7 @@ uint32_t timeout_ms = portMAX_DELAY; //By default wait forever
 // Define the timeout in milliseconds
 
 // ecall de imprimir + exit
-extern "C" void ecall_print(int option, void* value) { 
+/*extern "C" void ecall_print(int option, void* value) { 
     Serial.begin(115200);
 
     if (Serial.available()){
@@ -99,7 +99,7 @@ extern "C" char* ecall_read(int option, int size = 1) {
                 break;
         }
     }
-}
+}*/
 
 extern "C" void serial_begin(int baudrate) {
     Serial.begin(baudrate);
