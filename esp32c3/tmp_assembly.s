@@ -1,78 +1,26 @@
-#ARDUINO
+
+#
+# Creator (https://creatorsim.github.io/creator/)
+#
+
+# Sum of the first 10 numbers from 0 to 9
 .data
-    delay:  .word 1000
-    buttonPin: .word  4
-    ledpin: .word 5
-    buttonState:    .word   0
+	max: .byte 10
+
 .text
-setup:
-    li a0, 115200
-    addi sp, sp, -4      
-    sw ra, 0(sp)          
-    jal ra, cr_serial_begin
-    lw ra, 0(sp)          
-    addi sp, sp, 4            
-    la a0, buttonPin   
-    lw a0, 0(a0)       
-    li a1,  0x05 #INPUT_PULLUP
-    addi sp, sp, -4      
-    sw ra, 0(sp)   
-    jal ra, cr_pinMode
-    lw ra, 0(sp)          
-    addi sp, sp, 4
-    la a0, ledpin
-    lw a0, 0(a0)       
-    li a1,  0x03
-    addi sp, sp, -4      
-    sw ra, 0(sp)   
-    jal ra, cr_pinMode
-    lw ra, 0(sp)          
-    addi sp, sp, 4
-    jr ra
-button_pressed:
-    la a0, ledpin
-    lw a0, 0(a0)
-    li a1, 0x1
-    jal ra, cr_digitalWrite
-    la a0, delay
-    lw a0, 0(a0)
-    addi sp, sp, -16      
-    sw ra, 12(sp)
-    jal ra, cr_delay
-    lw ra, 12(sp)          
-    addi sp, sp, 16 
-    jal ra, loop
-loop:
-    la a0, buttonPin   
-    lw a0, 0(a0)       
-    addi sp, sp, -4      
-    sw ra, 0(sp)          
-    jal ra, cr_digitalRead
-    lw ra, 0(sp)          
-    addi sp, sp, 4
-    mv t0,a0
-    li t1 ,0 #LOW
-    beq t0,t1,button_pressed
-    la a0, ledpin
-    lw a0, 0(a0)
-    li a1, 0x0
-    jal ra, cr_digitalWrite
-    la a0, delay
-    lw a0, 0(a0)
-    addi sp, sp, -16      
-    sw ra, 12(sp)
-    jal ra, cr_delay
-    lw ra, 12(sp)          
-    addi sp, sp, 16 
-    j loop
-main:
-    addi sp, sp, -16       
-    sw ra, 12(sp)          
-    jal ra, cr_initArduino    
-    jal ra, setup
-    lw ra, 12(sp)         
-    addi sp, sp, 16               
-    li  t4, 0
-    beqz t4, loop 
-    jr ra
-    ret 
+	main: 	    
+		la   t0, max
+		lb   t0, 0 (t0)
+		li   t1, 0
+		li   a0, 0
+		
+	while:	bge  t1, t0, end_while
+		add  a0, a0, t1
+		addi t1, t1, 1
+		beq  zero, zero, while
+
+    end_while: 	li a7, 1
+		ecall # print_int
+
+		#return
+		jr ra

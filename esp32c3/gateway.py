@@ -28,6 +28,7 @@ import threading
 import select
 
 BUILD_PATH = './creator' #By default we call the classics ;)
+arduino = False
 
 stop_thread = False
 # Diccionario para almacenar el proceso
@@ -37,6 +38,23 @@ import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def do_fullclean_request(request):
+  try:
+    req_data = request.get_json()
+    target_device      = req_data['target_port']
+    req_data['status'] = ''
+    global BUILD_PATH
+    BUILD_PATH = './creator'
+    error = check_build()
+    # flashing steps...
+    if error ==0:
+      do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
+  except Exception as e:
+    req_data['status'] += str(e) + '\n'
+
+  return jsonify(req_data) 
+
 
 def read_output():
     global process_holder
@@ -224,23 +242,23 @@ def do_get_form(request):
   except Exception as e:
     return str(e)
 
-def check_build(file_in):
+# Change to ArduinoMode
+def do_arduino_mode(request):
+  req_data = request.get_json()
+  req_data['status'] = ''
+  global arduino
+  global BUILD_PATH
+  arduino = not arduino    
+  return  req_data
+ 
+def check_build():
+  global BUILD_PATH
   try:
-    # open input + output files
-    fin  = open(file_in, "rt")
-    data = []
-    # for each line in the input file...
-    for line in fin:
-      data = line.strip().split()
-      if (len(data) > 0):
-        global BUILD_PATH
-        if (data[0] == '#ARDUINO'):
-          print("#### ARDUINO ####\n")
-          BUILD_PATH = './creatino'
-          print("#### CHANGED PATHS ####\n")  
-        continue 
-    fin.close()
-    return 0  
+    if arduino:
+      BUILD_PATH = './creatino'
+    else:
+      BUILD_PATH = './creator' 
+    return 0   
   except Exception as e:
     print("Error adapting assembly file: ", str(e))
     return -1  
@@ -417,8 +435,8 @@ def do_flash_request(request):
     text_file.close()
     global BUILD_PATH
     BUILD_PATH = './creator'
-    # check assembly file to see if it is an Arduino program
-    error = check_build('tmp_assembly.s')
+    # check arduinoCheck
+    error = check_build()
 
     if 'openocd' in process_holder:
       logging.info('Killing OpenOCD')
@@ -554,6 +572,18 @@ def post_job():
 @cross_origin()
 def post_stop_flash():
   return do_stop_flash_request(request)
+
+# (6) POST /fullclean -> clean
+@app.route("/fullclean", methods=["POST"])
+@cross_origin()
+def post_fullclean_flash():
+  return do_fullclean_request(request)
+
+# (7) POST /arduinoMode-> cancel
+@app.route("/arduinoMode", methods=["POST"])
+@cross_origin()
+def post_arduino_mode():
+  return do_arduino_mode(request)
 
 
 # Run
