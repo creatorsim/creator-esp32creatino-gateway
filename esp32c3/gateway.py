@@ -24,6 +24,7 @@
 from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS, cross_origin
 import subprocess, os, signal, time
+import sys
 import threading
 import select
 
@@ -38,6 +39,17 @@ import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def handle_exit(sig, frame):
+    try:
+      print("\n🔴 Limpiando directorio de Creatino, espere...")
+      cmd_array = ['idf.py','-C', './creatino','fullclean']
+      subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+      print("✅ Borrado directorio de build de creatino. Cerrando programa.")
+      sys.exit(0)
+    except Exception as e:
+      print(f"ERROR:{e} ")
+
 
 def do_fullclean_request(request):
   try:
@@ -521,7 +533,10 @@ def do_stop_flash_request(request):
   try:
     req_data = request.get_json()
     req_data['status'] = ''
-    do_cmd(req_data, ['pkill',  'idf.py'])
+    #Cleaning creatino 
+    error = do_cmd_output(req_data, ['idf.py','-C', './creatino','fullclean'])
+    if error == 0:
+      do_cmd(req_data, ['pkill',  'idf.py'])
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
@@ -586,6 +601,8 @@ def post_fullclean_flash():
 @cross_origin()
 def post_arduino_mode():
   return do_arduino_mode(request)
+
+signal.signal(signal.SIGINT, handle_exit)
 
 
 # Run
