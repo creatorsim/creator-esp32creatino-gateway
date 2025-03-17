@@ -2,7 +2,7 @@
 
 
 #
-#  Copyright 2022-2024 Felix Garcia Carballeira, Diego Carmarmas Alonso, Alejandro Calderon Mateos
+#  Copyright 2022-2025 Felix Garcia Carballeira, Diego Carmarmas Alonso, Alejandro Calderon Mateos, Elisa Utrilla Arroyo
 #
 #  This file is part of CREATOR.
 #
@@ -40,6 +40,7 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+#  EXIT order
 def handle_exit(sig, frame):
     try:
       print("\n🔴 Limpiando directorio de Creatino, espere...")
@@ -50,7 +51,7 @@ def handle_exit(sig, frame):
     except Exception as e:
       print(f"ERROR:{e} ")
 
-
+####----Full Clean----
 def do_fullclean_request(request):
   try:
     req_data = request.get_json()
@@ -67,8 +68,21 @@ def do_fullclean_request(request):
 
   return jsonify(req_data) 
 
+###---------- Debug Processs------
+def check_gdb_connection():
+    """ Verifica si gdb está escuchando en el puerto 3333 """
+    command = ["lsof", "-i", ":3333"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5)  # Reduce el tiempo de espera
+        return output
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
 
-def read_output():
+
+def read_output(req_data):
+    """"Verifies process status"""
     global process_holder
 
     while True:
@@ -80,6 +94,33 @@ def read_output():
         if not openocd or not gdbgui:
             #logging.error("No están corriendo los procesos")
             break
+        
+        #Reconexión
+
+        # Convertimos la salida de bytes a texto
+        while True:
+          output = check_gdb_connection()
+          output_text = output.decode(errors="ignore")
+          if "riscv32-e" not in output_text:
+              print("NO FUFA: Reintentando conexión...")
+              
+              if "gdbgui" in process_holder:
+                  process_holder["gdbgui"].kill()  # Solo matar si existe
+                  process_holder.pop("gdbgui", None)
+
+              try:
+                  start_gdbgui_thread(req_data)
+                  print("Prueba otra vez...")
+              except Exception as e:
+                  logging.error(f"Fallo al crear proceso: {e}")
+
+          else:
+              print("FUFA: Conexión establecida con GDB.")
+              break  # Sale del bucle si GDB está activo
+          
+          time.sleep(5)  # Reducir tiempo de espera para mejorar la reconexión      
+
+
         # Leer stdout de openocd
         output = openocd.stdout.readline()
         if output:
@@ -138,7 +179,7 @@ def monitor_gdb_output(req_data, cmd_args, name):
 def start_monitoring_thread(req_data):
     try:
         logging.info(process_holder.keys())
-        output_thread = threading.Thread(target=read_output, daemon=True)
+        output_thread = threading.Thread(target=read_output, args = (req_data,), daemon=True)
         output_thread.start()
         return output_thread
     except Exception as e:
@@ -161,20 +202,6 @@ def start_openocd_thread(req_data):
         logging.error(f"Error starting OpenOCD: {str(e)}")
         return None
 
-def start_gdbgui_thread(req_data):
-    try:
-        route = BUILD_PATH + '/gdbinit'
-        threadGBD = threading.Thread(
-            target=monitor_gdb_output,
-            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route], 'gdbgui'),
-            daemon=True
-        )
-        threadGBD.start()
-        return threadGBD
-    except Exception as e:
-        req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
-        logging.error(f"Error starting GDBGUI: {str(e)}")
-        return None
     
 def start_gdbgui_thread(req_data):
     try:
@@ -193,7 +220,8 @@ def start_gdbgui_thread(req_data):
 
 def kill_all_processes(process_name):
     try:
-        commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
+        #commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
+        commannds = f"pkill {process_name[0]}{process_name[1]}"
         subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
         logging.info(f"Todos los procesos {process_name} han sido eliminados.")
     except subprocess.CalledProcessError as e:
@@ -205,7 +233,7 @@ def do_debug_request(request):
         target_device = req_data['target_port']
         req_data['status'] = ''
         
-        error = check_build('tmp_assembly.s')
+        error = check_build()
 
         if error == 0:
             if 'openocd' in process_holder:
@@ -237,7 +265,7 @@ def do_debug_request(request):
                 req_data['status'] += "Error starting monitor thread\n"
             print("Monitor thread started")
 
-            do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])  
+            #do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])  
         else:
             req_data['status'] += "Build error\n"
             
@@ -246,6 +274,8 @@ def do_debug_request(request):
         logging.error(f"Exception in do_debug_request: {e}")
     
     return jsonify(req_data)
+
+########----------
 
 # (1) Get form values
 def do_get_form(request):
