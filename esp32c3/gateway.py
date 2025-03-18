@@ -27,6 +27,7 @@ import subprocess, os, signal, time
 import sys
 import threading
 import select
+import logging
 
 BUILD_PATH = './creator' #By default we call the classics ;)
 arduino = False
@@ -34,8 +35,9 @@ arduino = False
 stop_thread = False
 # Diccionario para almacenar el proceso
 process_holder = {}
+#Stopping thread
+stop_event = threading.Event()
 
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -47,6 +49,8 @@ def handle_exit(sig, frame):
       cmd_array = ['idf.py','-C', './creatino','fullclean']
       subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
       print("✅ Borrado directorio de build de creatino. Cerrando programa.")
+      #cmd_array = ['pkill', 'gdbgui']
+      #subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
       sys.exit(0)
     except Exception as e:
       print(f"ERROR:{e} ")
@@ -80,80 +84,96 @@ def check_gdb_connection():
         lsof.kill()
         output, errs = lsof.communicate()
 
-
-def read_output(req_data):
-    """"Verifies process status"""
+def read_gdbgui_state(req_data):
     global process_holder
+    global stop_event
+    # Verificar si los procesos existen antes de acceder a ellos
+    openocd = process_holder.get("openocd")
+    gdbgui = process_holder.get("gdbgui")
 
+    # Si cualquiera de los procesos no está corriendo, salir del bucle
+    if not openocd or not gdbgui:
+        print("ERROR: Los procesos necesarios no están corriendo.")
+        stop_event.set()
+    
     while True:
-        # Verificar si los procesos existen antes de acceder a ellos
-        openocd = process_holder.get("openocd")
-        gdbgui = process_holder.get("gdbgui")
+      # Verificar la conexión a GDB
+      output = check_gdb_connection()
+      while output is None:
+          time.sleep(1)
 
-        # Si cualquiera de los procesos no está corriendo, salir del bucle
-        if not openocd or not gdbgui:
-            #logging.error("No están corriendo los procesos")
-            break
-        
-        #Reconexión
+      output_text = output.decode(errors="ignore")
+      if "riscv32-e" not in output_text:
+          print(" [ERROR]: Reintentando conexión...")
+          if "gdbgui" in process_holder:
+              process_holder["gdbgui"].kill()  # Solo matar si existe
+              process_holder.pop("gdbgui", None)
 
-        # Convertimos la salida de bytes a texto
-        while True:
-          output = check_gdb_connection()
-          output_text = output.decode(errors="ignore")
-          if "riscv32-e" not in output_text:
-              print("NO FUFA: Reintentando conexión...")
-              
-              if "gdbgui" in process_holder:
-                  process_holder["gdbgui"].kill()  # Solo matar si existe
+          try:
+              start_gdbgui_thread(req_data)
+              print("Prueba otra vez...")
+          except Exception as e:
+              logging.error(f"Fallo al crear proceso: {e}")
+
+          time.sleep(5)    
+      else:
+          print("Conexión establecida con GDB.")
+          break  # Sale del bucle si GDB está activo
+   
+
+
+
+def read_openocd_output(req_data):
+    global stop_event
+    """Verifica el estado del proceso"""
+    global process_holder
+    # Verificar si los procesos existen antes de acceder a ellos
+    openocd = process_holder.get("openocd")
+    gdbgui = process_holder.get("gdbgui")
+
+    # Si cualquiera de los procesos no está corriendo, salir del bucle
+    if not openocd:
+        print("ERROR: Los procesos necesarios no están corriendo.")
+        return None
+    #read_gdbgui_state(req_data)
+    while not stop_event.is_set():
+      # Leer stderr
+      error_output = openocd.stderr.readline()
+      if error_output:
+          if "OpenOCD already running" in error_output:
+              pass  # No hacer nada si OpenOCD ya está corriendo
+          elif "Please list all processes to check if OpenOCD is already running" in error_output:
+              logging.warning("OpenOCD se está ejecutando en otro proceso y no se puede conectar(¿Tiene otro servidor abierto?)")
+              openocd.kill()  # Matar proceso openocd
+              process_holder.pop("openocd", None)
+              if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
+                  gdbgui.kill()  # Matar proceso gdbgui
                   process_holder.pop("gdbgui", None)
-
-              try:
-                  start_gdbgui_thread(req_data)
-                  print("Prueba otra vez...")
-              except Exception as e:
-                  logging.error(f"Fallo al crear proceso: {e}")
-
+              stop_event.set()    
+              #break  # Salir del bucle si el error es crítico (OpenOCD ya corriendo)
+          elif "Please check the wire connection" in error_output:
+              logging.error("Por favor revise la conexión de cables")  
+              openocd.kill()  # Matar proceso openocd
+              process_holder.pop("openocd", None)
+              if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
+                  gdbgui.kill()  # Matar proceso gdbgui
+                  process_holder.pop("gdbgui", None)
+              stop_event.set()     
+              #break  # Salir del bucle si el error es por un problema de conexión
           else:
-              print("FUFA: Conexión establecida con GDB.")
-              break  # Sale del bucle si GDB está activo
+              logging.error(f"Salida de error desconocido: {error_output.strip()}")
+              openocd.kill()  # Matar proceso openocd
+              process_holder.pop("openocd", None)
+              if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
+                  gdbgui.kill()  # Matar proceso gdbgui
+                  process_holder.pop("gdbgui", None)
+              stop_event.set()     
+              #break  # Salir del bucle si hay un error no reconocido
+
           
-          time.sleep(5)  # Reducir tiempo de espera para mejorar la reconexión      
+          time.sleep(0.1)  # Pequeño delay para evitar consumo excesivo de CPU
 
 
-        # Leer stdout de openocd
-        output = openocd.stdout.readline()
-        if output:
-            logging.info(f"Salida estándar: {output.strip()}")
-
-        # Leer stderr
-        error_output = openocd.stderr.readline()
-        if error_output:
-            if "OpenOCD already running" in error_output:
-                pass  # No hacer nada si OpenOCD ya está corriendo
-            elif "Please list all processes to check if OpenOCD is already running" in error_output:
-                logging.warning("OpenOCD se está ejecutando en otro proceso y no se puede conectar(¿Tiene otro servidor abierto?)")
-                openocd.kill()
-                process_holder.pop("openocd", None)
-                gdbgui.kill()
-                process_holder.pop("gdbgui", None)
-                break
-            elif "Please check the wire connection" in error_output:
-                logging.error("Por favor revise la conexión de cables")  
-                openocd.kill()
-                process_holder.pop("openocd", None)
-                gdbgui.kill()
-                process_holder.pop("gdbgui", None)
-                break    
-            else:
-                logging.error(f"Salida de error: {error_output.strip()}")
-                openocd.kill()
-                process_holder.pop("openocd", None)
-                gdbgui.kill()
-                process_holder.pop("gdbgui", None)
-                break
-
-        time.sleep(0.1)  # Pequeño delay para evitar consumo excesivo de CPU
 
 def monitor_gdb_output(req_data, cmd_args, name):
     try:
@@ -173,15 +193,19 @@ def monitor_gdb_output(req_data, cmd_args, name):
         return process_holder[name]
     except Exception as e:
         logging.error(f"Error al ejecutar el comando: {e}")
-        process_holder.pop(name, None)  # Eliminar la clave de forma segura si existe
+        process_holder.pop(name, None)  # Eliminar la clave de forma segura si existeS
         return None  # Devolver un código de error en caso de fallo
 
 def start_monitoring_thread(req_data):
     try:
         logging.info(process_holder.keys())
-        output_thread = threading.Thread(target=read_output, args = (req_data,), daemon=True)
-        output_thread.start()
-        return output_thread
+        open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
+        open_thread.start()
+        while  not open_thread.is_alive():
+          time.sleep(1)
+        gdb_thread = threading.Thread(target=read_gdbgui_state, args = (req_data,), daemon=True)
+        gdb_thread.start()
+        return open_thread
     except Exception as e:
         req_data['status'] += f"Error starting Monitor: {str(e)}\n"
         logging.error(f"Error starting Monitor: {str(e)}")
@@ -220,8 +244,7 @@ def start_gdbgui_thread(req_data):
 
 def kill_all_processes(process_name):
     try:
-        #commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
-        commannds = f"pkill {process_name[0]}{process_name[1]}"
+        commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
         subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
         logging.info(f"Todos los procesos {process_name} han sido eliminados.")
     except subprocess.CalledProcessError as e:
@@ -258,7 +281,8 @@ def do_debug_request(request):
 
             while not ("gdbgui" in process_holder and "openocd" in process_holder):
                 time.sleep(1)
-
+            #---restart monitor
+            stop_event = threading.Event()
             logging.info('Starting monitor thread...')
             monitor_thread = start_monitoring_thread(req_data)
             if monitor_thread is None:
@@ -423,8 +447,9 @@ def do_monitor_request(request):
     req_data = request.get_json()
     target_device      = req_data['target_port']
     req_data['status'] = ''
+    check_build()
 
-    do_cmd(req_data, ['idf.py', '-p', target_device, 'monitor'])
+    do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
