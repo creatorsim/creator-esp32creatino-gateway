@@ -90,13 +90,14 @@ def read_gdbgui_state(req_data):
     # Verificar si los procesos existen antes de acceder a ellos
     openocd = process_holder.get("openocd")
     gdbgui = process_holder.get("gdbgui")
+    logging.info(f"PID de gdbgui: {gdbgui.pid}")
 
     # Si cualquiera de los procesos no está corriendo, salir del bucle
     if not openocd or not gdbgui:
         print("ERROR: Los procesos necesarios no están corriendo.")
         stop_event.set()
     
-    while True:
+    while not stop_event.is_set():
       # Verificar la conexión a GDB
       output = check_gdb_connection()
       while output is None:
@@ -108,17 +109,22 @@ def read_gdbgui_state(req_data):
           if "gdbgui" in process_holder:
               process_holder["gdbgui"].kill()  # Solo matar si existe
               process_holder.pop("gdbgui", None)
+              kill_all_processes("gdbgui")
 
           try:
-              start_gdbgui_thread(req_data)
-              print("Prueba otra vez...")
+              thread = start_gdbgui_thread(req_data)
+              while not thread.is_alive() and 'gdbgui' not in process_holder:
+                  time.sleep(1)        
+              print("Creado nuevo proceso")
+              if 'gdbgui' in process_holder:
+                 print(f"PID Nuevo de gdbgui: {process_holder['gdbgui'].pid}")
           except Exception as e:
               logging.error(f"Fallo al crear proceso: {e}")
 
           time.sleep(5)    
       else:
-          print("Conexión establecida con GDB.")
-          break  # Sale del bucle si GDB está activo
+          print(f"PID Actual: {process_holder['gdbgui'].pid}")
+          time.sleep(10)   
    
 
 
@@ -135,7 +141,6 @@ def read_openocd_output(req_data):
     if not openocd:
         print("ERROR: Los procesos necesarios no están corriendo.")
         return None
-    #read_gdbgui_state(req_data)
     while not stop_event.is_set():
       # Leer stderr
       error_output = openocd.stderr.readline()
@@ -251,6 +256,8 @@ def kill_all_processes(process_name):
         logging.error(f"Error al intentar matar los procesos {process_name}: {e}")
 
 def do_debug_request(request):
+    global stop_event
+    global process_holder
     try:
         req_data = request.get_json()
         target_device = req_data['target_port']
@@ -288,6 +295,7 @@ def do_debug_request(request):
             if monitor_thread is None:
                 req_data['status'] += "Error starting monitor thread\n"
             print("Monitor thread started")
+            
 
             #do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])  
         else:

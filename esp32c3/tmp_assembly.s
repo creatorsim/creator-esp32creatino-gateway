@@ -1,55 +1,104 @@
+#ARDUINO
 
-#
-# ARCOS.INF.UC3M.ES
-# BY-NC-SA (https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es)
-#
-
+.data
+    delay:  .word 1000
+    buttonPin: .word  4
+    ledpin: .word 5
+    buttonState:    .word   0
+    msg:    .string     "Button Pressed!"
 
 .text
+setup:
+    li a0, 115200
+    addi sp, sp, -4      
+    sw ra, 0(sp)          
+    jal ra, cr_serial_begin
+    lw ra, 0(sp)          
+    addi sp, sp, 4            
 
-     main: 
-           addi sp, sp, -4
-           sw ra, 0(sp)
+    la a0, buttonPin   # Carga la direcciÃ³n de buttonPin
+    lw a0, 0(a0)       # Lee el valor almacenado en la direcciÃ³n
+    li a1,  0x05 #INPUT_PULLUP
+    addi sp, sp, -4      
+    sw ra, 0(sp)   
+    jal ra, cr_pinMode
+    lw ra, 0(sp)          
+    addi sp, sp, 4
+    
+    la a0, ledpin
+    lw a0, 0(a0)       
+    li a1,  0x03
+    addi sp, sp, -4      
+    sw ra, 0(sp)   
+    jal ra, cr_pinMode
+    lw ra, 0(sp)          
+    addi sp, sp, 4
 
-           # t1 = factorial(5)
-           li  a0, 5
-           jal x1, factorial
+    jr ra
 
-           # print_int(t1)
-           li  a7, 1
-           ecall
+button_pressed:
+    la a0, msg
+    addi sp, sp, -16       # Reservar espacio en el stack
+    sw ra, 12(sp)          # Guardar el registro RA en el stack
+    jal ra,cr_serial_printf
+    lw ra, 12(sp)          # Restaurar el registro RA desde el stack
+    addi sp, sp, 16       # Liberar el espacio del stack
+    
+    la a0, ledpin
+    lw a0, 0(a0)
+    li a1, 0x1
+    jal ra, cr_digitalWrite
+    
+    la a0, delay
+    lw a0, 0(a0)
+    addi sp, sp, -16      
+    sw ra, 12(sp)
+    jal ra, cr_delay
+    lw ra, 12(sp)          
+    addi sp, sp, 16 
+    
+    jal ra, loop
 
-           # return
-           lw ra, 0(sp)
-           addi sp, sp, 4
-           jr ra
 
+loop:
+    la a0, buttonPin   
+    lw a0, 0(a0)       
+    addi sp, sp, -4      
+    sw ra, 0(sp)          
+    jal ra, cr_digitalRead
+    lw ra, 0(sp)          
+    addi sp, sp, 4
 
-factorial:
-           # crear "stack frame" para $ra, $fp y una variable local
-           addi sp, sp, -12
-           sw   ra, 8(sp)
-           sw   fp, 4(sp)
-           addi fp, sp, 4
+    mv t0,a0
 
-           # if (a0 < 2):
-           #     return 1
-           li   x5, 2
-           bge  a0, t0, b_else
-           li   a0, 1 
-           beq  x0, x0, b_efs
-           # else:
-           #    return a0 * factorial(a0 - 1)
-   b_else: sw   a0, -4(fp)
-           addi a0, a0, -1
-           jal  x1, factorial
-           lw   t1, -4(fp)
-           mul  a0, a0, t1
+    li t1 ,0 #LOW
 
-           # finalizar "stack frame"
-   b_efs:  lw   ra, 8(sp)
-           lw   fp, 4(sp)
-           addi sp, sp, 12
+    beq t0,t1,button_pressed
+    
+    la a0, ledpin
+    lw a0, 0(a0)
+    li a1, 0x0
+    jal ra, cr_digitalWrite
+    
+    la a0, delay
+    lw a0, 0(a0)
+    addi sp, sp, -16      
+    sw ra, 12(sp)
+    jal ra, cr_delay
+    lw ra, 12(sp)          
+    addi sp, sp, 16 
 
-           # return t0
-           jr ra
+    j loop
+
+main:
+    #Inicializar Arduino y configurar pines
+    addi sp, sp, -16       # Reservar espacio en el stack
+    sw ra, 12(sp)          # Guardar el registro RA en el stack
+    jal ra, cr_initArduino    
+    jal ra, setup
+    lw ra, 12(sp)          # Restaurar el registro RA desde el stack
+    addi sp, sp, 16       # Liberar el espacio del stack         
+    li  t4, 0
+    beqz t4, loop 
+    jr ra
+    ret 
