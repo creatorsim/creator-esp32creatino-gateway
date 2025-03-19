@@ -250,11 +250,32 @@ def start_gdbgui_thread(req_data):
 
 def kill_all_processes(process_name):
     try:
+        # Verifica si el nombre del proceso no está vacío
+        if not process_name:
+            logging.error("El nombre del proceso no puede estar vacío.")
+            return
+        
+        # Construye el comando
         commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
-        subprocess.run(commands, shell=True, capture_output=False, timeout=120, check=True)
-        logging.info(f"Todos los procesos {process_name} han sido eliminados.")
+        
+        # Ejecuta el comando
+        result = subprocess.run(commands, shell=True, capture_output=True, timeout=120, check=False)
+        
+        # Verifica si hubo algún error en el proceso
+        if result.returncode != 0:
+            logging.error(f"Error al intentar matar los procesos {process_name}. Salida: {result.stderr.decode()}")        
+        else:
+            logging.info(f"Todos los procesos {process_name} han sido eliminados.")
+    
+    except subprocess.TimeoutExpired as e:
+        logging.error(f"El proceso excedió el tiempo de espera: {e}")
+    
     except subprocess.CalledProcessError as e:
-        logging.error(f"Error al intentar matar los procesos {process_name}: {e}")
+        logging.error(f"Error al ejecutar el comando: {e}")
+    
+    except Exception as e:
+        logging.error(f"Ocurrió un error inesperado: {e}")
+
 
 def do_debug_request(request):
     global stop_event
@@ -511,6 +532,7 @@ def do_flash_request(request):
     ret = text_file.write(asm_code)
     text_file.close()
     global BUILD_PATH
+    global stop_event
     BUILD_PATH = './creator'
     # check arduinoCheck
     error = check_build()
@@ -524,6 +546,8 @@ def do_flash_request(request):
       logging.info('Killing GDBGUI')
       kill_all_processes("gdbgui")
       process_holder.pop('gdbgui', None)
+
+    stop_event.set() # Detener el hilo de monitoreo  
 
     # transform th temporal assembly file
     filename= BUILD_PATH + '/main/program.s'
