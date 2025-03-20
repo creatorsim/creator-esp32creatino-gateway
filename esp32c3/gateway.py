@@ -49,8 +49,6 @@ def handle_exit(sig, frame):
       cmd_array = ['idf.py','-C', './creatino','fullclean']
       subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
       print("✅ Borrado directorio de build de creatino. Cerrando programa.")
-      #cmd_array = ['pkill', 'gdbgui']
-      #subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
       sys.exit(0)
     except Exception as e:
       print(f"ERROR:{e} ")
@@ -88,14 +86,14 @@ def read_gdbgui_state(req_data):
     global process_holder
     global stop_event
     # Verificar si los procesos existen antes de acceder a ellos
-    openocd = process_holder.get("openocd")
+    #openocd = process_holder.get("openocd")
     gdbgui = process_holder.get("gdbgui")
     logging.info(f"PID de gdbgui: {gdbgui.pid}")
 
     # Si cualquiera de los procesos no está corriendo, salir del bucle
-    if not openocd or not gdbgui:
-        print("ERROR: Los procesos necesarios no están corriendo.")
-        stop_event.set()
+    # if not openocd or not gdbgui:
+    #     print("ERROR: Los procesos necesarios no están corriendo.")
+    #     stop_event.set()
     
     while not stop_event.is_set():
       # Verificar la conexión a GDB
@@ -107,9 +105,10 @@ def read_gdbgui_state(req_data):
       if "riscv32-e" not in output_text:
           print(" [ERROR]: Reintentando conexión...")
           if "gdbgui" in process_holder:
-              process_holder["gdbgui"].kill()  # Solo matar si existe
-              process_holder.pop("gdbgui", None)
-              kill_all_processes("gdbgui")
+            # Matar el proceso específico en process_holder
+            process_holder["gdbgui"].kill()  # Solo matar si existe
+            process_holder.pop("gdbgui", None)
+            kill_all_processes("gdbgui")
 
           try:
               thread = start_gdbgui_thread(req_data)
@@ -141,7 +140,7 @@ def read_openocd_output(req_data):
     if not openocd:
         print("ERROR: Los procesos necesarios no están corriendo.")
         return None
-    while not stop_event.is_set():
+    while True:
       # Leer stderr
       error_output = openocd.stderr.readline()
       if error_output:
@@ -167,13 +166,13 @@ def read_openocd_output(req_data):
               #break  # Salir del bucle si el error es por un problema de conexión
           else:
               logging.error(f"Salida de error desconocido: {error_output.strip()}")
-              openocd.kill()  # Matar proceso openocd
-              process_holder.pop("openocd", None)
+              # openocd.kill()  # Matar proceso openocd
+              # process_holder.pop("openocd", None)
               if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
                   gdbgui.kill()  # Matar proceso gdbgui
                   process_holder.pop("gdbgui", None)
               stop_event.set()     
-              #break  # Salir del bucle si hay un error no reconocido
+              # Salir del bucle si hay un error no reconocido
 
           
           time.sleep(0.1)  # Pequeño delay para evitar consumo excesivo de CPU
@@ -208,7 +207,8 @@ def start_monitoring_thread(req_data):
         open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
         open_thread.start()
         while  not open_thread.is_alive():
-          time.sleep(1)
+          time.sleep(1) 
+        time.sleep(5)  #Para que no haya problemas con el hilo, tiene que esperar a que se abra el socket
         gdb_thread = threading.Thread(target=read_gdbgui_state, args = (req_data,), daemon=True)
         gdb_thread.start()
         return open_thread
@@ -254,6 +254,13 @@ def kill_all_processes(process_name):
         if not process_name:
             logging.error("El nombre del proceso no puede estar vacío.")
             return
+        # Verificar si hay más procesos 'gdbgui' en el sistema
+        commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | wc -l"  # Cuenta cuántos procesos 'gdbgui' están en ejecución
+        result = subprocess.run(commands, shell=True, capture_output=True, text=True)
+
+        # Si hay más de un proceso, llamar a kill_all_processes
+        if int(result.stdout.strip()) > 1:
+            print(f"Hay más procesos '{process_name}'.") 
         
         # Construye el comando
         commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
