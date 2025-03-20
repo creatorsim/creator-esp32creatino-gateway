@@ -30,6 +30,7 @@ import select
 import logging
 
 BUILD_PATH = './creator' #By default we call the classics ;)
+ACTUAL_TARGET = ''
 arduino = False
 
 stop_thread = False
@@ -540,6 +541,7 @@ def do_flash_request(request):
     text_file.close()
     global BUILD_PATH
     global stop_event
+    global ACTUAL_TARGET
     BUILD_PATH = './creator'
     # check arduinoCheck
     error = check_build()
@@ -567,7 +569,31 @@ def do_flash_request(request):
     if error == 0 and BUILD_PATH == './creator':
       error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
     if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board]) 
+      error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
+    elif error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
+        print("ACTUAL_TARGET: ", ACTUAL_TARGET)
+        ACTUAL_TARGET = target_board
+        # Cambiar la frecuencia de FreeRTOS
+        error = do_cmd_output(req_data, ['sed', '-i', 's/^CONFIG_FREERTOS_HZ=.*/CONFIG_FREERTOS_HZ=1000/', f'{BUILD_PATH}/sdkconfig'])
+        if error != 0:
+            print("Error al modificar la frecuencia de FreeRTOS")
+            raise Exception
+        
+        error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
+        if error != 0:
+            print("Error al borrar el directorio de build")
+            raise Exception
+
+        error = do_cmd_output(req_data, ['idf.py', '-C', BUILD_PATH, 'set-target', target_board])
+        if error != 0:
+            print(f"Error al establecer el target: {target_board}")
+            raise Exception
+
+        # # Paso 3: Ejecutar reconfigure para aplicar los cambios
+        # error = do_cmd_output(req_data, ['idf.py', '-C', BUILD_PATH, f'-DIDF_TARGET={target_board}', 'reconfigure'])
+        # if error != 0:
+        #     print("Error al ejecutar reconfigure")
+        #     raise Exception
 
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
