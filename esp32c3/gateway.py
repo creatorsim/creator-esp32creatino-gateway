@@ -102,7 +102,8 @@ def read_gdbgui_state(req_data):
     # Verificar si los procesos existen antes de acceder a ellos
     #openocd = process_holder.get("openocd")
     gdbgui = process_holder.get("gdbgui")
-    logging.info(f"PID de gdbgui: {gdbgui.pid}")
+    if gdbgui:
+      logging.info(f"PID de gdbgui: {gdbgui.pid}")
 
     # Si cualquiera de los procesos no está corriendo, salir del bucle
     # if not openocd or not gdbgui:
@@ -125,9 +126,7 @@ def read_gdbgui_state(req_data):
             kill_all_processes("gdbgui")
 
           try:
-              thread = start_gdbgui_thread(req_data)
-              while not thread.is_alive() and 'gdbgui' not in process_holder:
-                  time.sleep(1)        
+              thread = start_gdbgui(req_data)       
               print("Creado nuevo proceso")
               if 'gdbgui' in process_holder:
                  print(f"PID Nuevo de gdbgui: {process_holder['gdbgui'].pid}")
@@ -148,12 +147,11 @@ def read_openocd_output(req_data):
     global process_holder
     # Verificar si los procesos existen antes de acceder a ellos
     openocd = process_holder.get("openocd")
-    gdbgui = process_holder.get("gdbgui")
 
     # Si cualquiera de los procesos no está corriendo, salir del bucle
-    if not openocd:
-        print("ERROR: Los procesos necesarios no están corriendo.")
-        return None
+    # if not openocd:
+    #     print("ERROR: Los procesos necesarios no están corriendo.")
+    #     return None
     while True:
       # Leer stderr
       error_output = openocd.stderr.readline()
@@ -164,27 +162,18 @@ def read_openocd_output(req_data):
               logging.warning("OpenOCD se está ejecutando en otro proceso y no se puede conectar(¿Tiene otro servidor abierto?)")
               openocd.kill()  # Matar proceso openocd
               process_holder.pop("openocd", None)
-              if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
-                  gdbgui.kill()  # Matar proceso gdbgui
-                  process_holder.pop("gdbgui", None)
               stop_event.set()    
               #break  # Salir del bucle si el error es crítico (OpenOCD ya corriendo)
           elif "Please check the wire connection" in error_output:
               logging.error("Por favor revise la conexión de cables")  
               openocd.kill()  # Matar proceso openocd
               process_holder.pop("openocd", None)
-              if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
-                  gdbgui.kill()  # Matar proceso gdbgui
-                  process_holder.pop("gdbgui", None)
               stop_event.set()     
               #break  # Salir del bucle si el error es por un problema de conexión
           else:
               logging.error(f"Salida de error desconocido: {error_output.strip()}")
-              # openocd.kill()  # Matar proceso openocd
-              # process_holder.pop("openocd", None)
-              if "gdbgui" in process_holder:  # Verificar si gdbgui está en el holder antes de matarlo
-                  gdbgui.kill()  # Matar proceso gdbgui
-                  process_holder.pop("gdbgui", None)
+              openocd.kill()  # Matar proceso openocd
+              process_holder.pop("openocd", None)
               stop_event.set()     
               # Salir del bucle si hay un error no reconocido
 
@@ -214,21 +203,21 @@ def monitor_gdb_output(req_data, cmd_args, name):
         process_holder.pop(name, None)  # Eliminar la clave de forma segura si existeS
         return None  # Devolver un código de error en caso de fallo
 
-def start_monitoring_thread(req_data):
-    try:
-        logging.info(process_holder.keys())
-        open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
-        open_thread.start()
-        while  not open_thread.is_alive():
-          time.sleep(1) 
-        time.sleep(5)  #Para que no haya problemas con el hilo, tiene que esperar a que se abra el socket
-        gdb_thread = threading.Thread(target=read_gdbgui_state, args = (req_data,), daemon=True)
-        gdb_thread.start()
-        return open_thread
-    except Exception as e:
-        req_data['status'] += f"Error starting Monitor: {str(e)}\n"
-        logging.error(f"Error starting Monitor: {str(e)}")
-        return None
+# def start_monitoring_thread(req_data):
+#     try:
+#         logging.info(process_holder.keys())
+#         open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
+#         open_thread.start()
+#         while  not open_thread.is_alive():
+#           time.sleep(1) 
+#         time.sleep(5)  #Para que no haya problemas con el hilo, tiene que esperar a que se abra el socket
+#         gdb_thread = threading.Thread(target=read_gdbgui_state, args = (req_data,), daemon=True)
+#         gdb_thread.start()
+#         return open_thread
+#     except Exception as e:
+#         req_data['status'] += f"Error starting Monitor: {str(e)}\n"
+#         logging.error(f"Error starting Monitor: {str(e)}")
+#         return None
 
 def start_openocd_thread(req_data):
     try:
@@ -246,16 +235,20 @@ def start_openocd_thread(req_data):
         return None
 
     
-def start_gdbgui_thread(req_data):
+def start_gdbgui(req_data):
     try:
         route = BUILD_PATH + '/gdbinit'
-        threadGBD = threading.Thread(
-            target=monitor_gdb_output,
-            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route], 'gdbgui'),
-            daemon=True
-        )
-        threadGBD.start()
-        return threadGBD
+        # threadGBD = threading.Thread(
+        #     target=monitor_gdb_output,
+        #     args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route], 'gdbgui'),
+        #     daemon=True
+        # )
+        # threadGBD.start()
+        # return threadGBD
+        result = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route, "monitor"])
+        if result is None:
+            logging.info("GDBGUI did not start")
+        return 0
     except Exception as e:
         req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
         logging.error(f"Error starting GDBGUI: {str(e)}")
@@ -320,25 +313,40 @@ def do_debug_request(request):
                 kill_all_processes("gdbgui")
                 process_holder.pop('gdbgui', None)
 
+            stop_event = threading.Event()
             openocd_thread = start_openocd_thread(req_data)
             while openocd_thread is None:
                 time.sleep(1)
                 openocd_thread = start_openocd_thread(req_data)
-
-            gdbgui_thread = start_gdbgui_thread(req_data)
-            while gdbgui_thread is None:
+            #Empezar a ver el estado de openocd
+            while process_holder.get('openocd') is None:
                 time.sleep(1)
-                gdbgui_thread = start_gdbgui_thread(req_data)
+            logging.info("Starting openocd monitor thread")
+            open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
+            open_thread.start()
+            while  open_thread is None:
+              time.sleep(1)
+            # logging.info("Starting gdbgui")
+            # error = start_gdbgui(req_data)
+            # if error == 0:
+            #     logging.info("GDBGUI started")  
+            # else:
+            #     req_data['status'] += "Error starting gdbgui\n"
+            # time.sleep(5)
+            logging.info("Starting gdbgui")
+            read_gdbgui_state(req_data)
+                      
 
-            while not ("gdbgui" in process_holder and "openocd" in process_holder):
-                time.sleep(1)
+            # gdbgui_thread = start_gdbgui_thread(req_data)
+            # while gdbgui_thread is None:
+            #     time.sleep(1)
+            #     gdbgui_thread = start_gdbgui_thread(req_data)
             #---restart monitor
-            stop_event = threading.Event()
-            logging.info('Starting monitor thread...')
-            monitor_thread = start_monitoring_thread(req_data)
-            if monitor_thread is None:
-                req_data['status'] += "Error starting monitor thread\n"
-            print("Monitor thread started")
+
+            #monitor_thread = start_monitoring_thread(req_data)
+            # if monitor_thread is None:
+            #     req_data['status'] += "Error starting monitor thread\n"
+            # print("Monitor thread started")
             
 
             
