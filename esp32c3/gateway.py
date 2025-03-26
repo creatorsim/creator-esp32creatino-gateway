@@ -24,10 +24,12 @@
 from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS, cross_origin
 import subprocess, os, signal, time
+import keyboard
 import sys
 import threading
 import select
 import logging
+import shutil
 
 BUILD_PATH = './creator' #By default we call the classics ;)
 ACTUAL_TARGET = ''
@@ -46,10 +48,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 #  EXIT order
 def handle_exit(sig, frame):
     try:
-      print("\n🔴 Limpiando directorio de Creatino, espere...")
+      print("\n🔴 Cleaning gateway...")
       cmd_array = ['idf.py','-C', './creatino','fullclean']
       subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
-      print("✅ Borrado directorio de build de creatino. Cerrando programa.")
+      cmd_array = ['idf.py','-C', './creator','fullclean']
+      subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+      carpeta = './creatino/managed_components'
+
+      # Verificar si la carpeta existe antes de intentar eliminarla
+      if os.path.exists(carpeta):
+          shutil.rmtree(carpeta)
+          print(f"La carpeta '{carpeta}' ha sido eliminada.")
+      else:
+          print(f"La carpeta '{carpeta}' no existe.")
+
+      print("✅ Closing program...")
       sys.exit(0)
     except Exception as e:
       print(f"ERROR:{e} ")
@@ -247,7 +260,9 @@ def start_gdbgui_thread(req_data):
     except Exception as e:
         req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
         logging.error(f"Error starting GDBGUI: {str(e)}")
-        return None    
+        return None
+
+
 
 def kill_all_processes(process_name):
     try:
@@ -327,7 +342,7 @@ def do_debug_request(request):
             print("Monitor thread started")
             
 
-            #do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor'])  
+            
         else:
             req_data['status'] += "Build error\n"
             
@@ -486,6 +501,17 @@ def do_monitor_request(request):
     target_device      = req_data['target_port']
     req_data['status'] = ''
     check_build()
+    stop_event.set() # Detener el hilo de monitoreo
+
+    if 'openocd' in process_holder:
+      logging.info('Killing OpenOCD')
+      kill_all_processes("openocd")
+      process_holder.pop('openocd', None)
+
+    if 'gdbgui' in process_holder:
+      logging.info('Killing GDBGUI')
+      kill_all_processes("gdbgui")
+      process_holder.pop('gdbgui', None)
 
     do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
 
@@ -500,9 +526,9 @@ def do_cmd(req_data, cmd_array):
     """
     try:
         # Execute the command normally
-        result = subprocess.run(cmd_array, capture_output=False, timeout=120, check=True)    
-    except:
-        pass
+        result = subprocess.run(cmd_array, capture_output=False, timeout=120, check=True)  
+    except Exception as e:
+      pass
 
     if result.stdout != None:
       req_data['status'] += result.stdout.decode('utf-8') + '\n'
@@ -567,12 +593,14 @@ def do_flash_request(request):
 
     # flashing steps...
     if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
+      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
     if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
+      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
+
     elif error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
         print("ACTUAL_TARGET: ", ACTUAL_TARGET)
         ACTUAL_TARGET = target_board
+        
         # Cambiar la frecuencia de FreeRTOS
         error = do_cmd_output(req_data, ['sed', '-i', 's/^CONFIG_FREERTOS_HZ=.*/CONFIG_FREERTOS_HZ=1000/', f'{BUILD_PATH}/sdkconfig'])
         if error != 0:
@@ -583,17 +611,12 @@ def do_flash_request(request):
         if error != 0:
             print("Error al borrar el directorio de build")
             raise Exception
+        
 
         error = do_cmd_output(req_data, ['idf.py', '-C', BUILD_PATH, 'set-target', target_board])
         if error != 0:
             print(f"Error al establecer el target: {target_board}")
             raise Exception
-
-        # # Paso 3: Ejecutar reconfigure para aplicar los cambios
-        # error = do_cmd_output(req_data, ['idf.py', '-C', BUILD_PATH, f'-DIDF_TARGET={target_board}', 'reconfigure'])
-        # if error != 0:
-        #     print("Error al ejecutar reconfigure")
-        #     raise Exception
 
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
@@ -663,6 +686,20 @@ def do_stop_flash_request(request):
 
   return jsonify(req_data)
 
+def do_stop_monitor_request(request):
+  try:
+    req_data = request.get_json()
+    req_data['status'] = ''
+    print("Killing Monitor")
+    kill_all_processes("idf.py")
+    
+
+  except Exception as e:
+    req_data['status'] += str(e) + '\n'
+
+  return jsonify(req_data)
+
+
 
 # Setup flask and cors:
 app  = Flask(__name__)
@@ -709,6 +746,11 @@ def post_job():
 @cross_origin()
 def post_stop_flash():
   return do_stop_flash_request(request)
+
+@app.route("/stopmonitor", methods=["POST"])
+@cross_origin()
+def post_stop_monitor():
+  return do_stop_monitor_request(request)
 
 # (6) POST /fullclean -> clean
 @app.route("/fullclean", methods=["POST"])
