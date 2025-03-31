@@ -363,7 +363,7 @@ def do_get_form(request):
 # Change to ArduinoMode
 def do_arduino_mode(request):
   req_data = request.get_json()
-  statusChecker = req_data.get('state')
+  statusChecker = req_data.get('arduino_support')
   req_data['status'] = ''
   global arduino
   arduino = not statusChecker
@@ -512,7 +512,9 @@ def do_monitor_request(request):
       kill_all_processes("gdbgui")
       process_holder.pop('gdbgui', None)
 
-    do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
+    error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
+    if error == 0:
+      req_data['status'] += 'Monitoring program success.\n'  
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
@@ -621,6 +623,8 @@ def do_flash_request(request):
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH, '-p', target_device, 'flash'])
+    if error == 0:
+          req_data['status'] += 'Flash completed successfully.\n'  
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
