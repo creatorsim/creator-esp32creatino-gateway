@@ -334,7 +334,8 @@ def do_debug_request(request):
             #     req_data['status'] += "Error starting gdbgui\n"
             # time.sleep(5)
             logging.info("Starting gdbgui")
-            read_gdbgui_state(req_data)
+            #read_gdbgui_state(req_data)
+            start_gdbgui(req_data)
                       
 
             # gdbgui_thread = start_gdbgui_thread(req_data)
