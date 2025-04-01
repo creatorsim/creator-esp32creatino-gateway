@@ -360,19 +360,21 @@ def kill_all_processes(process_name):
         commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
         
         # Ejecuta el comando
-        result = subprocess.run(commands, shell=True, capture_output=True, timeout=120, check=False)
-        
+        result = subprocess.run(commands, shell=True, capture_output=True, timeout=120, check=False)  
         # Verifica si hubo algún error en el proceso
         if result.returncode != 0:
             logging.error(f"Error al intentar matar los procesos {process_name}. Salida: {result.stderr.decode()}")        
         else:
             logging.info(f"Todos los procesos {process_name} han sido eliminados.")
+        return result.returncode 
     
     except subprocess.TimeoutExpired as e:
         logging.error(f"El proceso excedió el tiempo de espera: {e}")
+        return result.returncode 
     
     except subprocess.CalledProcessError as e:
         logging.error(f"Error al ejecutar el comando: {e}")
+        return result.returncode 
     
     except Exception as e:
         logging.error(f"Ocurrió un error inesperado: {e}")
@@ -403,12 +405,18 @@ def check_jtag_connection():
 def do_debug_request(request):
     global stop_event
     global process_holder
+    req_data = {'status': ''}
     try:
         req_data = request.get_json()
-        target_device = req_data['target_port']
-        req_data['status'] = ''
-        
+        target_device = req_data.get('target_port', None)
+        if not target_device:
+            req_data['status'] = 'Error: target_port is missing in the request.\n'
+            return jsonify(req_data)
+
         error = check_build()
+        if error != 0:
+            req_data['status'] += "Build error.\n"
+            return jsonify(req_data)
 
         # Clean previous debug system
         if error == 0:
@@ -441,9 +449,9 @@ def do_debug_request(request):
             req_data['status'] += "Build error\n"
             
     except Exception as e:
-        req_data['status'] += str(e) + '\n'
+        req_data['status'] += f"Unexpected error: {str(e)}\n"
         logging.error(f"Exception in do_debug_request: {e}")
-    
+
     return jsonify(req_data)
 
 ########----------
@@ -836,7 +844,9 @@ def do_stop_monitor_request(request):
     req_data = request.get_json()
     req_data['status'] = ''
     print("Killing Monitor")
-    kill_all_processes("idf.py")
+    error = kill_all_processes("idf.py")
+    if error == 0:
+      req_data['status'] += 'Stopped Monitor\n' 
     
 
   except Exception as e:
