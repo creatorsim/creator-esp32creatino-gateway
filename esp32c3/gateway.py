@@ -234,25 +234,96 @@ def start_openocd_thread(req_data):
         logging.error(f"Error starting OpenOCD: {str(e)}")
         return None
 
-    
 def start_gdbgui(req_data):
     try:
-        route = BUILD_PATH + '/gdbinit'
-        # threadGBD = threading.Thread(
-        #     target=monitor_gdb_output,
-        #     args=(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route], 'gdbgui'),
-        #     daemon=True
-        # )
-        # threadGBD.start()
-        # return threadGBD
-        result = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route, "monitor"])
-        if result is None:
-            logging.info("GDBGUI did not start")
+        route = os.path.join(BUILD_PATH, 'gdbinit')
+        req_data['status'] = ''
+        # Ejecutar primera sesión GDB (configuración inicial)
+        logging.info("Starting GDB...")
+        #gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
+        gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb']
+        try:
+            gdb_proc = subprocess.Popen(gdb_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            time.sleep(10)
+            logging.info("Kill GDB")
+            kill_all_processes('riscv32-e')
+
+
+        except Exception as e:
+            # req_data['status'] += f"Error during GDB setup: {e}\n"
+            # logging.error("Error during GDB setup: %s", e)
+            pass
+        time.sleep(10)    
+        # # Verificar si hay TTY disponible
+        if not sys.stdin.isatty():
+            logging.warning("No TTY available. idf.py monitor may fail.")
+        # Lanzar GDBGUI con monitor
+        logging.info("Starting GDBGUI...")
+        time.sleep(5)  # Esperar un poco antes de iniciar GDBGUI
+        #gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
+        gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui']
+        try:
+            result = subprocess.run(
+                gdbgui_cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+        except subprocess.CalledProcessError as e:
+            logging.error("Failed to start GDBGUI: %s", e)
+            req_data['status'] += f"Error starting GDBGUI (code {e.returncode}): {e.stderr}\n"
+            return None
+        except Exception as e:
+            logging.error("Unexpected error in GDBGUI: %s", e)
+            req_data['status'] += f"Unexpected error starting GDBGUI: {e}\n"
+            return None
+
         return 0
+
     except Exception as e:
-        req_data['status'] += f"Error starting GDBGUI: {str(e)}\n"
-        logging.error(f"Error starting GDBGUI: {str(e)}")
+        req_data['status'] += f"Critical error in start_gdbgui: {e}\n"
+        logging.error("Critical error in start_gdbgui: %s", e)
         return None
+        
+# def start_gdbgui(req_data):
+#     try:
+#         route = BUILD_PATH + '/gdbinit'
+#         # Send first configuration gdb session
+#         req_data['status'] = ''
+#         cmd_array = ['idf.py', '-C', BUILD_PATH, 'gdb', "-x", route]
+#         gdb_proc = subprocess.Popen(cmd_array)
+
+#         # Esperar unos segundos
+#         time.sleep(5)
+
+#         # Matar el proceso si sigue vivo
+#         if gdb_proc.poll() is None:
+#             try:
+#                 os.kill(gdb_proc.pid, signal.SIGTERM)  # SIGKILL si no responde
+#                 time.sleep(1)
+#             except Exception as e:
+#                 logging.warning("Error killing GDB process: %s", e)
+
+#         time.sleep(5)
+#         cmd_array = ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route, 'monitor']
+#         try:
+#             result = subprocess.run(
+#                 cmd_array, capture_output=False, check=True
+#             )
+#         except subprocess.SubprocessError as e:
+#             logging.error("Failed to start GDBGUI: %s", e)
+#             req_data['status'] += f"Error starting GDBGUI: {e}\n"
+#             return None
+
+#         if result is None:
+#             logging.info("GDBGUI did not start")
+#             req_data['status'] += f"Error starting GDBGUI: {e}\n"
+#         return 0
+#     except Exception as e:
+#         req_data['status'] += f"Error starting GDBGUI: {e}\n"
+#         logging.error("Error starting GDBGUI: %s", e)
+#         return None
 
 
 
@@ -302,18 +373,21 @@ def do_debug_request(request):
         
         error = check_build()
 
+        # Clean previous debug system
         if error == 0:
-            if 'openocd' in process_holder:
-                logging.info('Killing OpenOCD')
-                kill_all_processes("openocd")
-                process_holder.pop('openocd', None)
+            # if 'openocd' in process_holder:
+            #     logging.info('Killing OpenOCD')
+            #     kill_all_processes("openocd")
+            #     process_holder.pop('openocd', None)
 
-            if 'gdbgui' in process_holder:
-                logging.info('Killing GDBGUI')
-                kill_all_processes("gdbgui")
-                process_holder.pop('gdbgui', None)
+            # if 'gdbgui' in process_holder:
+            #     logging.info('Killing GDBGUI')
+            #     kill_all_processes("gdbgui")
+            #     process_holder.pop('gdbgui', None)
 
-            stop_event = threading.Event()
+            # stop_event = threading.Event()
+
+            #Start openocd
             openocd_thread = start_openocd_thread(req_data)
             while openocd_thread is None:
                 time.sleep(1)
@@ -324,9 +398,12 @@ def do_debug_request(request):
             logging.info("Starting openocd monitor thread")
             open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
             open_thread.start()
-            while  open_thread is None:
+            while open_thread is None:
               time.sleep(1)
-            # logging.info("Starting gdbgui")
+
+            # Start gdbgui   
+            logging.info("Starting gdbgui")
+            start_gdbgui(req_data)
             # error = start_gdbgui(req_data)
             # if error == 0:
             #     logging.info("GDBGUI started")  
@@ -335,7 +412,7 @@ def do_debug_request(request):
             # time.sleep(5)
             logging.info("Starting gdbgui")
             #read_gdbgui_state(req_data)
-            start_gdbgui(req_data)
+            
                       
 
             # gdbgui_thread = start_gdbgui_thread(req_data)
