@@ -240,8 +240,15 @@ def start_gdbgui(req_data):
         req_data['status'] = ''
         # Ejecutar primera sesión GDB (configuración inicial)
         logging.info("Starting GDB...")
+        try:
+           subprocess.run([
+                'sh', '-c',
+                f"echo 'CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n' >> {BUILD_PATH}/sdkconfig"
+            ])
+        except Exception as e:
+           pass   
         #gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
-        gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb']
+        gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
         try:
             gdb_proc = subprocess.Popen(gdb_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(10)
@@ -260,15 +267,17 @@ def start_gdbgui(req_data):
         # Lanzar GDBGUI con monitor
         logging.info("Starting GDBGUI...")
         time.sleep(5)  # Esperar un poco antes de iniciar GDBGUI
-        #gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
-        gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui']
+        gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
+        #gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui','monitor']
         try:
             result = subprocess.run(
                 gdbgui_cmd,
-                capture_output=True,
-                text=True,
-                check=True
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                text=True
             )
+            if result.returncode != 0:
+                logging.error(f"Command failed with return code {result.returncode}")
 
         except subprocess.CalledProcessError as e:
             logging.error("Failed to start GDBGUI: %s", e)
@@ -679,8 +688,8 @@ def do_flash_request(request):
     # flashing steps...
     if error == 0 and BUILD_PATH == './creator':
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
-    if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
+    # if error == 0 and BUILD_PATH == './creator':
+    #   error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
 
     elif error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
         print("ACTUAL_TARGET: ", ACTUAL_TARGET)
