@@ -695,20 +695,30 @@ def do_flash_request(request):
             r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=.*/#/',
             f'{BUILD_PATH}/sdkconfig'
         ])
+        if error != 0:
+          print("Error during Memory Disable")
+          raise Exception
         error = do_cmd_output(req_data, [
             'sed', '-i',
             r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=.*/# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set/',
             f'{BUILD_PATH}/sdkconfig'
         ])
+        if error != 0:
+          print("Error during Memory Disable")
+          raise Exception
+        
     elif error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
         print("ACTUAL_TARGET: ", ACTUAL_TARGET)
         ACTUAL_TARGET = target_board
+        print(f"File path: {BUILD_PATH}/sdkconfig")
         
         # Cambiar la frecuencia de FreeRTOS
-        error = do_cmd_output(req_data, ['sed', '-i', 's/^CONFIG_FREERTOS_HZ=.*/CONFIG_FREERTOS_HZ=1000/', f'{BUILD_PATH}/sdkconfig'])
+        error = do_cmd(req_data, ['sed', '-i', 's/^CONFIG_FREERTOS_HZ=.*/CONFIG_FREERTOS_HZ=1000/', f'{BUILD_PATH}/sdkconfig'])
         if error != 0:
             print("Error al modificar la frecuencia de FreeRTOS")
             raise Exception
+        print("Frecuencia de FreeRTOS modificada correctamente")
+        time.sleep(1)
         
         error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
         if error != 0:
@@ -720,6 +730,25 @@ def do_flash_request(request):
         if error != 0:
             print(f"Error al establecer el target: {target_board}")
             raise Exception
+        
+    error = do_cmd_output(req_data, [
+        'sed', '-i',
+        r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=.*/#/',
+        f'{BUILD_PATH}/sdkconfig'
+    ])
+    if error != 0:
+      print("Error during Memory Disable")
+      raise Exception
+    print("Memory Disable")
+    time.sleep(1)
+    error = do_cmd_output(req_data, [
+        'sed', '-i',
+        r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=.*/# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set/',
+        f'{BUILD_PATH}/sdkconfig'
+    ])
+    if error != 0:
+      print("Error during Memory Disable")
+      raise Exception
 
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
