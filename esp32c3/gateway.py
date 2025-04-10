@@ -239,14 +239,7 @@ def start_gdbgui(req_data):
         route = os.path.join(BUILD_PATH, 'gdbinit')
         req_data['status'] = ''
         # Ejecutar primera sesión GDB (configuración inicial)
-        logging.info("Starting GDB...")
-        try:
-           subprocess.run([
-                'sh', '-c',
-                f"echo 'CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n' >> {BUILD_PATH}/sdkconfig"
-            ])
-        except Exception as e:
-           pass   
+        logging.info("Starting GDB...") 
         #gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
         gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
         try:
@@ -395,7 +388,12 @@ def do_debug_request(request):
             #     process_holder.pop('gdbgui', None)
 
             # stop_event = threading.Event()
-
+            # Desactivar memoria 
+            try:
+              subprocess.run(['sed', '-i', 's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=y/ /', f'{BUILD_PATH}/sdkconfig'])
+              subprocess.run(['sed', '-i', 's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=y/#CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set/', f'{BUILD_PATH}/sdkconfig'])
+            except Exception as e:
+              pass  
             #Start openocd
             openocd_thread = start_openocd_thread(req_data)
             while openocd_thread is None:
@@ -688,9 +686,19 @@ def do_flash_request(request):
     # flashing steps...
     if error == 0 and BUILD_PATH == './creator':
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
-    # if error == 0 and BUILD_PATH == './creator':
-    #   error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
-
+    if error == 0 and BUILD_PATH == './creator':
+      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
+      if error == 0:
+        error = do_cmd_output(req_data, [
+            'sed', '-i',
+            r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=.*/#/',
+            f'{BUILD_PATH}/sdkconfig'
+        ])
+        error = do_cmd_output(req_data, [
+            'sed', '-i',
+            r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=.*/# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set/',
+            f'{BUILD_PATH}/sdkconfig'
+        ])
     elif error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
         print("ACTUAL_TARGET: ", ACTUAL_TARGET)
         ACTUAL_TARGET = target_board
