@@ -141,46 +141,67 @@ def read_gdbgui_state(req_data):
 
 
 
-def read_openocd_output(req_data):
-    global stop_event
-    """Verifica el estado del proceso"""
-    global process_holder
-    # Verificar si los procesos existen antes de acceder a ellos
-    openocd = process_holder.get("openocd")
+# def read_openocd_output(req_data):
+#     global stop_event
+#     """Verifica el estado del proceso"""
+#     global process_holder
+#     # Verificar si los procesos existen antes de acceder a ellos
+#     openocd = process_holder.get("openocd")
 
-    # Si cualquiera de los procesos no está corriendo, salir del bucle
-    # if not openocd:
-    #     print("ERROR: Los procesos necesarios no están corriendo.")
-    #     return None
-    while True:
-      # Leer stderr
-      error_output = openocd.stderr.readline()
-      if error_output:
-          if "OpenOCD already running" in error_output:
-              pass  # No hacer nada si OpenOCD ya está corriendo
-          elif "Please list all processes to check if OpenOCD is already running" in error_output:
-              logging.warning("OpenOCD se está ejecutando en otro proceso y no se puede conectar(¿Tiene otro servidor abierto?)")
-              openocd.kill()  # Matar proceso openocd
-              process_holder.pop("openocd", None)
-              stop_event.set()    
-              #break  # Salir del bucle si el error es crítico (OpenOCD ya corriendo)
-          elif "Please check the wire connection" in error_output:
-              logging.error("Por favor revise la conexión de cables")  
-              openocd.kill()  # Matar proceso openocd
-              process_holder.pop("openocd", None)
-              stop_event.set()     
-              #break  # Salir del bucle si el error es por un problema de conexión
-          else:
-              logging.error(f"Salida de error desconocido: {error_output.strip()}")
-              openocd.kill()  # Matar proceso openocd
-              process_holder.pop("openocd", None)
-              stop_event.set()     
-              # Salir del bucle si hay un error no reconocido
+#     # Si cualquiera de los procesos no está corriendo, salir del bucle
+#     # if not openocd:
+#     #     print("ERROR: Los procesos necesarios no están corriendo.")
+#     #     return None
+#     while True:
+#       # Leer stderr
+#       error_output = openocd.stderr.readline()
+#       if error_output:
+#           if "OpenOCD already running" in error_output:
+#               pass  # No hacer nada si OpenOCD ya está corriendo
+#           elif "Please list all processes to check if OpenOCD is already running" in error_output:
+#               logging.warning("OpenOCD se está ejecutando en otro proceso y no se puede conectar(¿Tiene otro servidor abierto?)")
+#               openocd.kill()  # Matar proceso openocd
+#               process_holder.pop("openocd", None)
+#               stop_event.set()    
+#               #break  # Salir del bucle si el error es crítico (OpenOCD ya corriendo)
+#           elif "Please check the wire connection" in error_output:
+#               logging.error("Por favor revise la conexión de cables")  
+#               openocd.kill()  # Matar proceso openocd
+#               process_holder.pop("openocd", None)
+#               stop_event.set()     
+#               #break  # Salir del bucle si el error es por un problema de conexión
+#           else:
+#               logging.error(f"Salida de error desconocido: {error_output.strip()}")
+#               openocd.kill()  # Matar proceso openocd
+#               process_holder.pop("openocd", None)
+#               stop_event.set()     
+#               # Salir del bucle si hay un error no reconocido
 
           
           time.sleep(0.1)  # Pequeño delay para evitar consumo excesivo de CPU
 
 
+def check_uart_connection():
+    """ Verifica si el puerto UART está disponible """
+    command = ["ls", "/dev/ttyUSB*"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, _ = lsof.communicate(timeout=5)  # Reduce el tiempo de espera
+        if output:
+            output_text = output.decode(errors="ignore")
+            if "ttyUSB" in output_text:
+                logging.info("Puerto UART encontrado.")
+                return True
+            else:
+                logging.warning("No se encontró puerto UART.")
+                return False
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        lsof.communicate()
+    except Exception as e:
+        logging.error(f"Error al verificar la conexión UART: {e}")
+        return None
+    return False
 
 def monitor_gdb_output(req_data, cmd_args, name):
     try:
@@ -204,21 +225,6 @@ def monitor_gdb_output(req_data, cmd_args, name):
         process_holder.pop(name, None)  # Eliminar la clave de forma segura si existeS
         return None  # Devolver un código de error en caso de fallo
 
-# def start_monitoring_thread(req_data):
-#     try:
-#         logging.info(process_holder.keys())
-#         open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
-#         open_thread.start()
-#         while  not open_thread.is_alive():
-#           time.sleep(1) 
-#         time.sleep(5)  #Para que no haya problemas con el hilo, tiene que esperar a que se abra el socket
-#         gdb_thread = threading.Thread(target=read_gdbgui_state, args = (req_data,), daemon=True)
-#         gdb_thread.start()
-#         return open_thread
-#     except Exception as e:
-#         req_data['status'] += f"Error starting Monitor: {str(e)}\n"
-#         logging.error(f"Error starting Monitor: {str(e)}")
-#         return None
 
 def start_openocd_thread(req_data):
     try:
@@ -234,101 +240,87 @@ def start_openocd_thread(req_data):
         req_data['status'] += f"Error starting OpenOCD: {str(e)}\n"
         logging.error(f"Error starting OpenOCD: {str(e)}")
         return None
+    
+def check_gdb_connection():
+    """ Verifica si gdb está escuchando en el puerto 3333 y actúa si encuentra 'riscv32-e' """
+    command = ["lsof", "-i", ":3333"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5)  # Reduce el tiempo de espera
+        if output:
+            output_text = output.decode(errors="ignore")
+            if "riscv32-e" in output_text:
+                logging.warning("'riscv32-e' detectado en el puerto 3333. Ejecutando kill_all_processes.")
+                kill_all_processes("riscv32-e")
+            return True
+        return None
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
+        return None
+    except Exception as e:
+        logging.error(f"Error al verificar la conexión GDB: {e}")
+        return None
+  
 
 def start_gdbgui(req_data):
     try:
         route = os.path.join(BUILD_PATH, 'gdbinit')
         req_data['status'] = ''
-        # Ejecutar primera sesión GDB (configuración inicial)
+        # Starting up GDB session
         logging.info("Starting GDB...") 
-        #gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
         gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
         try:
-            gdb_proc = subprocess.Popen(gdb_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            time.sleep(10)
-            logging.info("Kill GDB")
-            kill_all_processes('riscv32-e')
-
-
+          subprocess.Popen(gdb_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
         except Exception as e:
-            # req_data['status'] += f"Error during GDB setup: {e}\n"
-            # logging.error("Error during GDB setup: %s", e)
-            pass
-        time.sleep(10)    
-        # # Verificar si hay TTY disponible
-        if not sys.stdin.isatty():
-            logging.warning("No TTY available. idf.py monitor may fail.")
+            req_data['status'] += f"Error during GDB setup: {e}\n"
+            return jsonify(req_data)
+        # try:
+        #    output = check_gdb_connection()
+        #    while output is None:
+        #       time.sleep(1)
+        #       output = check_gdb_connection()
+        # except Exception as e:
+        #     req_data['status'] += f"Error during GDB setup: {e}\n"
+        #     return jsonify(req_data)
         # Lanzar GDBGUI con monitor
-        logging.info("Starting GDBGUI...")
-        time.sleep(5)  # Esperar un poco antes de iniciar GDBGUI
-        gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
-        #gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui','monitor']
-        try:
-            result = subprocess.run(
-                gdbgui_cmd,
-                stdout=sys.stdout,
-                stderr=sys.stderr,
-                text=True
-            )
-            if result.returncode != 0:
-                logging.error(f"Command failed with return code {result.returncode}")
+        time.sleep(5)
+        kill_all_processes("riscv32-e")
+        time.sleep(5)
+        if check_uart_connection:
+          logging.info("Starting GDBGUI...")
+          gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
+          try:
+              process_holder['gdbgui'] = subprocess.run(
+                  gdbgui_cmd,
+                  stdout=sys.stdout,
+                  stderr=sys.stderr,
+                  text=True
+              )
+              if process_holder['gdbgui'].returncode != 0:
+                  logging.error(f"Command failed with return code {process_holder['gdbgui'].returncode}")
 
-        except subprocess.CalledProcessError as e:
-            logging.error("Failed to start GDBGUI: %s", e)
-            req_data['status'] += f"Error starting GDBGUI (code {e.returncode}): {e.stderr}\n"
-            return None
-        except Exception as e:
-            logging.error("Unexpected error in GDBGUI: %s", e)
-            req_data['status'] += f"Unexpected error starting GDBGUI: {e}\n"
-            return None
-
-        return 0
+          except subprocess.CalledProcessError as e:
+              logging.error("Failed to start GDBGUI: %s", e)
+              req_data['status'] += f"Error starting GDBGUI (code {e.returncode}): {e.stderr}\n"
+              return None
+          except Exception as e:
+              logging.error("Unexpected error in GDBGUI: %s", e)
+              req_data['status'] += f"Unexpected error starting GDBGUI: {e}\n"
+              return None
+          
+          req_data['status'] += f"Finished debug session: {e}\n"
+        else:
+          req_data['status'] += f"UART not connected: {e}\n"
+        return jsonify(req_data)
+          
 
     except Exception as e:
         req_data['status'] += f"Critical error in start_gdbgui: {e}\n"
         logging.error("Critical error in start_gdbgui: %s", e)
         return None
         
-# def start_gdbgui(req_data):
-#     try:
-#         route = BUILD_PATH + '/gdbinit'
-#         # Send first configuration gdb session
-#         req_data['status'] = ''
-#         cmd_array = ['idf.py', '-C', BUILD_PATH, 'gdb', "-x", route]
-#         gdb_proc = subprocess.Popen(cmd_array)
-
-#         # Esperar unos segundos
-#         time.sleep(5)
-
-#         # Matar el proceso si sigue vivo
-#         if gdb_proc.poll() is None:
-#             try:
-#                 os.kill(gdb_proc.pid, signal.SIGTERM)  # SIGKILL si no responde
-#                 time.sleep(1)
-#             except Exception as e:
-#                 logging.warning("Error killing GDB process: %s", e)
-
-#         time.sleep(5)
-#         cmd_array = ['idf.py', '-C', BUILD_PATH, 'gdbgui', "-x", route, 'monitor']
-#         try:
-#             result = subprocess.run(
-#                 cmd_array, capture_output=False, check=True
-#             )
-#         except subprocess.SubprocessError as e:
-#             logging.error("Failed to start GDBGUI: %s", e)
-#             req_data['status'] += f"Error starting GDBGUI: {e}\n"
-#             return None
-
-#         if result is None:
-#             logging.info("GDBGUI did not start")
-#             req_data['status'] += f"Error starting GDBGUI: {e}\n"
-#         return 0
-#     except Exception as e:
-#         req_data['status'] += f"Error starting GDBGUI: {e}\n"
-#         logging.error("Error starting GDBGUI: %s", e)
-#         return None
-
-
 
 def kill_all_processes(process_name):
     try:
@@ -365,6 +357,28 @@ def kill_all_processes(process_name):
     except Exception as e:
         logging.error(f"Ocurrió un error inesperado: {e}")
 
+def check_jtag_connection():
+    """ Verifica si el JTAG está conectado """
+    command = ["lsusb"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5)  # Reduce el tiempo de espera
+        if output:
+            output_text = output.decode(errors="ignore")
+            if "JTAG" in output_text:
+                logging.info("JTAG encontrado en la salida de lsusb.")
+                return True
+            else:
+                logging.warning("No se encontró JTAG en la salida de lsusb.")
+                return False
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
+    except Exception as e:
+        logging.error(f"Error al verificar la conexión JTAG: {e}")
+        return None
+    return False
+
 
 def do_debug_request(request):
     global stop_event
@@ -378,23 +392,14 @@ def do_debug_request(request):
 
         # Clean previous debug system
         if error == 0:
-            # if 'openocd' in process_holder:
-            #     logging.info('Killing OpenOCD')
-            #     kill_all_processes("openocd")
-            #     process_holder.pop('openocd', None)
-
-            # if 'gdbgui' in process_holder:
-            #     logging.info('Killing GDBGUI')
-            #     kill_all_processes("gdbgui")
-            #     process_holder.pop('gdbgui', None)
-
-            # stop_event = threading.Event()
-            # Desactivar memoria 
-            try:
-              subprocess.run(['sed', '-i', 's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=y/ /', f'{BUILD_PATH}/sdkconfig'])
-              subprocess.run(['sed', '-i', 's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=y/#CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set/', f'{BUILD_PATH}/sdkconfig'])
-            except Exception as e:
-              pass  
+            if 'openocd' in process_holder:
+                logging.info('Killing OpenOCD')
+                kill_all_processes("openocd")
+                process_holder.pop('openocd', None)
+            #Check if JTAG is connected
+            if not check_jtag_connection():
+                req_data['status'] += "No JTAG found\n"
+                return jsonify(req_data)
             #Start openocd
             openocd_thread = start_openocd_thread(req_data)
             while openocd_thread is None:
@@ -403,39 +408,12 @@ def do_debug_request(request):
             #Empezar a ver el estado de openocd
             while process_holder.get('openocd') is None:
                 time.sleep(1)
-            logging.info("Starting openocd monitor thread")
-            open_thread = threading.Thread(target=read_openocd_output, args = (req_data,), daemon=True)
-            open_thread.start()
-            while open_thread is None:
-              time.sleep(1)
-
             # Start gdbgui   
             logging.info("Starting gdbgui")
-            start_gdbgui(req_data)
-            # error = start_gdbgui(req_data)
-            # if error == 0:
-            #     logging.info("GDBGUI started")  
-            # else:
-            #     req_data['status'] += "Error starting gdbgui\n"
-            # time.sleep(5)
-            logging.info("Starting gdbgui")
-            #read_gdbgui_state(req_data)
-            
-                      
-
-            # gdbgui_thread = start_gdbgui_thread(req_data)
-            # while gdbgui_thread is None:
-            #     time.sleep(1)
-            #     gdbgui_thread = start_gdbgui_thread(req_data)
-            #---restart monitor
-
-            #monitor_thread = start_monitoring_thread(req_data)
-            # if monitor_thread is None:
-            #     req_data['status'] += "Error starting monitor thread\n"
-            # print("Monitor thread started")
-            
-
-            
+            error = start_gdbgui(req_data)
+            if error != 0:
+                req_data['status'] += "Error starting gdbgui\n"
+                return jsonify(req_data)   
         else:
             req_data['status'] += "Build error\n"
             
