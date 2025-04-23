@@ -156,9 +156,6 @@ def read_gdbgui_state(req_data):
           print(f"PID Actual: {process_holder['gdbgui'].pid}")
           time.sleep(10)   
    
-
-
-
 # def read_openocd_output(req_data):
 #     global stop_event
 #     """Verifica el estado del proceso"""
@@ -194,10 +191,6 @@ def read_gdbgui_state(req_data):
 #               process_holder.pop("openocd", None)
 #               stop_event.set()     
 #               # Salir del bucle si hay un error no reconocido
-
-          
-          time.sleep(0.1)  # Pequeño delay para evitar consumo excesivo de CPU
-
 
 def check_uart_connection():
     """ Verifica si el puerto UART está disponible """
@@ -359,22 +352,39 @@ def kill_all_processes(process_name):
         commands = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}' | xargs kill -9"
         
         # Ejecuta el comando
-        result = subprocess.run(commands, shell=True, capture_output=True, timeout=120, check=False)
-        
+        result = subprocess.run(commands, shell=True, capture_output=True, timeout=120, check=False)  
         # Verifica si hubo algún error en el proceso
         if result.returncode != 0:
             logging.error(f"Error al intentar matar los procesos {process_name}. Salida: {result.stderr.decode()}")        
         else:
             logging.info(f"Todos los procesos {process_name} han sido eliminados.")
+        return result.returncode 
     
     except subprocess.TimeoutExpired as e:
         logging.error(f"El proceso excedió el tiempo de espera: {e}")
+        return result.returncode 
     
     except subprocess.CalledProcessError as e:
         logging.error(f"Error al ejecutar el comando: {e}")
+        return result.returncode 
     
     except Exception as e:
         logging.error(f"Ocurrió un error inesperado: {e}")
+        return result.returncode 
+
+#  def is_jtag_connected():
+#     """
+#     Verifica si el dispositivo JTAG está conectado.
+#     """
+#     try:
+#         # Usa un comando como `lsusb` para verificar dispositivos USB conectados
+#         result = subprocess.run(['lsusb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+#         if "JTAG" in result.stdout:  # Cambia "JTAG" por el identificador específico de tu dispositivo
+#             return True
+#         return False
+#     except Exception as e:
+#         logging.error(f"Error checking JTAG connection: {str(e)}")
+#         return False   
 
 def check_jtag_connection():
     """ Verifica si el JTAG está conectado """
@@ -438,11 +448,10 @@ def do_debug_request(request):
                 return jsonify(req_data)   
         else:
             req_data['status'] += "Build error\n"
-            
     except Exception as e:
-        req_data['status'] += str(e) + '\n'
+        req_data['status'] += f"Unexpected error: {str(e)}\n"
         logging.error(f"Exception in do_debug_request: {e}")
-    
+
     return jsonify(req_data)
 
 ########----------
@@ -457,7 +466,7 @@ def do_get_form(request):
 # Change to ArduinoMode
 def do_arduino_mode(request):
   req_data = request.get_json()
-  statusChecker = req_data.get('state')
+  statusChecker = req_data.get('arduino_support')
   req_data['status'] = ''
   global arduino
   arduino = not statusChecker
@@ -606,7 +615,9 @@ def do_monitor_request(request):
       kill_all_processes("gdbgui")
       process_holder.pop('gdbgui', None)
 
-    do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
+    error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
+    if error == 0:
+      req_data['status'] += 'Monitoring program success.\n'  
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
@@ -761,6 +772,8 @@ def do_flash_request(request):
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH, '-p', target_device, 'flash'])
+    if error == 0:
+          req_data['status'] += 'Flash completed successfully.\n'  
 
   except Exception as e:
     req_data['status'] += str(e) + '\n'
@@ -831,7 +844,9 @@ def do_stop_monitor_request(request):
     req_data = request.get_json()
     req_data['status'] = ''
     print("Killing Monitor")
-    kill_all_processes("idf.py")
+    error = kill_all_processes("idf.py")
+    if error == 0:
+      req_data['status'] += 'Stopped Monitor\n' 
     
 
   except Exception as e:
