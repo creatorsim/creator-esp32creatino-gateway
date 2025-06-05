@@ -86,87 +86,214 @@ exit_ecall:
 .extern initArduino
 .global cr_initArduino
 cr_initArduino:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, initArduino
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 .extern digitalRead
 .global cr_digitalRead
 cr_digitalRead:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, digitalRead 
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret  
 .globl cr_pinMode
 .extern pinMode
 cr_pinMode:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, pinMode
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 .globl cr_digitalWrite
 .extern digitalWrite
 cr_digitalWrite:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
-    jal ra, digitalWrite
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
-    ret 
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
+
+    jal ra, digitalWrite   # Llamar a digitalWrite
+
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
+    ret
 #Analog
 .globl cr_analogRead
 .extern analogRead
 cr_analogRead:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, analogRead
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 .globl cr_analogReadResolution
 .extern analogReadResolution
 cr_analogReadResolution:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, analogReadResolution
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 .globl cr_analogWrite
 .extern analogWrite
 cr_analogWrite:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, analogWrite
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret               
 # Maths
 .globl cr_map
 .extern aux_map
 cr_map:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, aux_map
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 
 .globl cr_constrain
 .extern aux_constrain
 cr_constrain:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, aux_constrain
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
-    jr ra
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
 
 .globl cr_abs
 cr_abs:
@@ -200,11 +327,25 @@ pow_loop:
 .globl cr_sqrt
 .extern sqrt
 cr_sqrt:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, sqrt
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
     # Se llamaría a c porque esta placa no soporta punto flotante
 .globl cr_sq
@@ -217,31 +358,73 @@ cr_sq:
 .extern cos   
 cr_cos:
    # Se llamaría a c porque esta placa no soporta punto flotante (no tiene FPU )
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, cos
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack 
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 .globl cr_sin
 .extern sin   
 cr_sin:
    # Se llamaría a c porque esta placa no soporta punto flotante (no tiene FPU )
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, sin
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 .globl cr_tan
 .extern tan   
 cr_tan:
    # Se llamaría a c porque esta placa no soporta punto flotante (no tiene FPU )
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, tan
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra                      
 # Bits and bytes ==> watchout 4 ports
 .globl cr_bit
@@ -291,41 +474,82 @@ cr_lowByte:
     # Obtener el byte bajo (bits 0-7)
     andi a0, a0, 0x00FF  # Enmascarar los 8 bits inferiores 
     ret                        
-# Trigonometry...call directly the function
 # Interrupts
 .extern attachInterrupt
 .global cr_attachInterrupt
 cr_attachInterrupt:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, attachInterrupt 
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 
 .extern detachInterrupt
 .global cr_detachInterrupt
 cr_detachInterrupt:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, detachInterrupt 
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 .extern cr_digitalPinToGPIONumber
 .global cr_digitalPinToInterrupt
 #(((uint8_t)digitalPinToGPIONumber(p)) < NUM_DIGITAL_PINS) ? (p) : NOT_AN_INTERRUPT
 cr_digitalPinToInterrupt:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, cr_digitalPinToGPIONumber 
     ##
     li t1, 49            
     bltu a0, t1, valid_pin 
     li a0, -1             # NOT_AN_INTERRUPT
     j end_function
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 
 valid_pin:
@@ -339,51 +563,121 @@ end_function:
 .extern pulseIn
 .global cr_pulseIn
 cr_pulseIn:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, pulseIn 
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 
 .extern pulseInLong
 .global cr_pulseInLong
 cr_pulseInLong:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, pulseInLong
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 
 .extern shiftIn
 .global cr_shiftIn
 cr_shiftIn:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, shiftIn
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 
 .extern shiftOut
 .global cr_shiftOut
 cr_shiftOut:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra, shiftOut
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret                           
 .extern interrupts
 .globl cr_interrupts     
 cr_interrupts:
-    addi sp, sp, -4       # Reservar espacio en el stack
-    sw ra, 0(sp)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     li a0, 1
     call vPortClearInterruptMaskFromISR
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
-    addi sp, sp, 4      # Liberar el espacio del stack
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 .globl cr_noInterrupts
 .extern xPortSetInterruptMaskFromISR
@@ -665,80 +959,192 @@ random_maxmin:
 .globl cr_serial_available
 .extern serial_available
 cr_serial_available:
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_available
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 
 .globl cr_serial_availableForWrite
 .extern serial_availableForWrite
 cr_serial_availableForWrite:
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_availableForWrite
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 
 .globl cr_serial_begin
 .extern serial_begin
 cr_serial_begin:
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_begin
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 
 .globl cr_serial_end
 .extern serial_end
 cr_serial_end: 
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_end
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 
 .globl cr_serial_find
 .extern serial_find
 cr_serial_find: 
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_find
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 
 .globl cr_serial_findUntil
 .extern serial_findUntil
 cr_serial_findUntil: 
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_findUntil
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra 
 
 .globl cr_serial_flush
 .extern serial_flush
 cr_serial_flush:
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_flush
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra
 .global cr_serial_peek
 .extern serial_peek   
 cr_serial_peek:
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_peek
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret     
 .globl cr_serial_parseFloat
 #.extern serial_parseFloat
@@ -753,11 +1159,25 @@ cr_serial_parseFloat: #TODO
 .globl cr_serial_printf
 .extern aux_serial_printf
 cr_serial_printf: #Only Char
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,aux_serial_printf
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp,4 
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     jr ra             
 
                  
@@ -842,11 +1262,25 @@ cr_serial_parseInt: #Lee números
 .globl cr_serial_read
 .extern serial_read
 cr_serial_read: #Lee números
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_read
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 
 .globl aux_readBytes
@@ -914,21 +1348,49 @@ aux_readBytes: #Serial.readBytes(buffer, length) lee letras
     ret
 .global cr_serial_readBytes   
 cr_serial_readBytes:
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_readBytes
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret    
 .global cr_serial_readBytesUntil 
 .extern serial_readBytesUntil   
 cr_serial_readBytesUntil:
     #Searches until it founds the char in a2
-    addi sp, sp, -4      
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
+    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
+    sw t0, 0(sp)           # Guardar t0
+    sw t1, 4(sp)           # Guardar t1
+    sw t2, 8(sp)           # Guardar t2
+    sw t3, 12(sp)          # Guardar t3
+    sw t4, 16(sp)          # Guardar t4
+    sw t5, 20(sp)          # Guardar t5
+    sw t6, 24(sp)          # Guardar t6
     jal ra,serial_readBytesUntil
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
+    lw t0, 0(sp)           # Restaurar t0
+    lw t1, 4(sp)           # Restaurar t1
+    lw t2, 8(sp)           # Restaurar t2
+    lw t3, 12(sp)          # Restaurar t3
+    lw t4, 16(sp)          # Restaurar t4
+    lw t5, 20(sp)          # Restaurar t5
+    lw t6, 24(sp)          # Restaurar t6
+    lw ra, 28(sp)          # Restaurar ra
+    addi sp, sp, 32        # Liberar espacio del stack
     ret
 .global cr_serial_readString   
 cr_serial_readString:
