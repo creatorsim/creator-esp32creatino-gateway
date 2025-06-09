@@ -1,7 +1,6 @@
 # dual_CREATOR_driver
 Best of both worlds for ESP32-C3
 
-![Animación de ejemplo](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2Fkd3oycmw1bDN6c2FiYmg0bTJzMTV0enExYXg5MXNrMnFqeXUyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fDqGThpuG6vS/giphy.gif)
 
 ## Important
 1. This repository only works with CREATOR'S page: https://creatorsim.github.io/
