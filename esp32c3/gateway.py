@@ -35,6 +35,76 @@ BUILD_PATH = './creator' #By default we call the classics ;)
 ACTUAL_TARGET = ''
 arduino = False
 
+creatino_functions = [
+    "initArduino",
+    "digitalRead",
+    "pinMode",
+    "digitalWrite",
+    "analogRead",
+    "analogReadResolution",
+    "analogWrite",
+    "map",
+    "constrain",
+    "abs",
+    "max",
+    "min",
+    "pow",
+    "bit",
+    "bitClear",
+    "bitRead",
+    "bitSet",
+    "bitWrite",
+    "highByte",
+    "lowByte",
+    "sqrt",
+    "sq",
+    "cos",
+    "sin",
+    "tan",
+    "attachInterrupt",
+    "detachInterrupt",
+    "digitalPinToInterrupt",
+    "pulseIn",
+    "pulseInLong",
+    "shiftIn",
+    "shiftOut",
+    "interrupts",
+    "nointerrupts",
+    "isDigit",
+    "isAlpha",
+    "isAlphaNumeric",
+    "isAscii",
+    "isControl",
+    "isPunct",
+    "isHexadecimalDigit",
+    "isUpperCase",
+    "isLowerCase",
+    "isPrintable",
+    "isGraph",
+    "isSpace",
+    "isWhiteSpace",
+    "delay",
+    "delayMicroseconds",
+    "randomSeed",
+    "random",
+    "serial_available",
+    "serial_availableForWrite",
+    "serial_begin",
+    "serial_end",
+    "serial_find",
+    "serial_findUntil",
+    "serial_flush",
+    "serial_parseFloat",
+    "serial_parseInt",
+    "serial_read",
+    "serial_readBytes",
+    "serial_readBytesUntil",
+    "serial_readString",
+    "serial_readStringUntil",
+    "serial_write",
+    "serial_printf"
+]
+
 stop_thread = False
 # Diccionario para almacenar el proceso
 process_holder = {}
@@ -340,13 +410,9 @@ def do_debug_request(request):
 
             # Start OpenOCD
             openocd_thread = start_openocd_thread(req_data)
-            while openocd_thread is None:
-                time.sleep(1)
-                openocd_thread = start_openocd_thread(req_data)
-
-            # Esperar a que openocd esté en process_holder
             while process_holder.get('openocd') is None:
-                time.sleep(1)
+              time.sleep(1)
+              #start_openocd_thread(req_data)
 
             # Start gdbgui   
             logging.info("Starting gdbgui")
@@ -413,9 +479,15 @@ def creator_build(file_in, file_out):
     # for each line in the input file...
     for line in fin:
       data = line.strip().split()
+      # Creatino replace functions
+      if len(data) >= 3 and data[0] == 'jal':
+          ra_token = data[1].replace(',', '').strip()
+          func_token = data[2].replace(',', '').strip()
+          if ra_token == 'ra' and func_token in creatino_functions:
+              line = f"jal ra, cr_{func_token}\n"
+
       if (len(data) > 0):
         if any(token.startswith('cr_') for token in data):
-            #logging.debug(f"Uso de función cr_ detectado: {data} en modo {BUILD_PATH}")
             if BUILD_PATH == './creator':
                 raise CrFunctionNotAllowed()
         if (data[0] == 'rdcycle'):
@@ -499,7 +571,6 @@ def creator_build(file_in, file_out):
           fout.write("addi sp, sp, 128\n")
           fout.write("###############\n")
           continue
-
 
       fout.write(line)
 
@@ -639,94 +710,48 @@ def do_flash_request(request):
      
     if error == 0 and BUILD_PATH == './creator':
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
-    # Check if sdkconfig has gone   
-    if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'set-target', target_board])
-      sdkconfig_path = os.path.join(BUILD_PATH, "sdkconfig")
-      if error == 0:
-        error = do_cmd_output(req_data, [
-            'sed', '-i',
-            r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=.*/#/',
-            f'{BUILD_PATH}/sdkconfig'
-        ])
-        if error != 0:
-          logging.error("Error during Memory Disable")
-          raise Exception
-        error = do_cmd_output(req_data, [
-            'sed', '-i',
-            r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=.*/# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set/',
-            f'{BUILD_PATH}/sdkconfig'
-        ])
-        if error != 0:
-          print("Error during Memory Disable")
-          raise Exception
-        
-    elif error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
-        print("ACTUAL_TARGET: ", ACTUAL_TARGET)
-        # ACTUAL_TARGET = target_board
+    # if error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
+    if error == 0 and ACTUAL_TARGET != target_board:
+        # print("ACTUAL_TARGET: ", ACTUAL_TARGET)
         print(f"File path: {BUILD_PATH}/sdkconfig")
-         # Check if sdkconfig has gone 
         sdkconfig_path = os.path.join(BUILD_PATH, "sdkconfig")
-
-        # Paso 1: Establecer el target primero
+        # 1. Crear/actualizar sdkconfig.defaults con la frecuencia correcta
+        defaults_path = os.path.join(BUILD_PATH, "sdkconfig.defaults")
+        if target_board == 'esp32c3':
+          with open(defaults_path, "w") as f:
+              f.write(
+                  "CONFIG_FREERTOS_HZ=1000\n"
+                  "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set\n"
+                  "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set\n"
+              )
+        
+        # 2. If previous sdkconfig exists, check if mem protection is disabled (for debug purposes)
+        if os.path.exists(sdkconfig_path):
+          #CONFIG_FREERTOS_HZ=1000
+          do_cmd(req_data, [
+              'sed', '-i',
+              r'/^CONFIG_FREERTOS_HZ=/c\CONFIG_FREERTOS_HZ=1000',
+              sdkconfig_path
+          ])
+          # Memory Protection
+          do_cmd(req_data, [
+              'sed', '-i',
+              r'/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=/c\# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set',
+              sdkconfig_path
+          ])
+          # Memory protection lock
+          do_cmd(req_data, [
+              'sed', '-i',
+              r'/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=/c\# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set',
+              sdkconfig_path
+          ])
+          
+        # 3. Ahora sí, ejecutar set-target
         error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH, 'set-target', target_board])
         if error != 0:
             raise Exception("No se pudo establecer el target")
-
-        # Paso 2: Crear sdkconfig.defaults
-        defaults_path = os.path.join(BUILD_PATH, "sdkconfig.defaults")
-        with open(defaults_path, "w") as f:
-            f.write(
-                "CONFIG_FREERTOS_HZ=1000\n"
-                "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set\n"
-                "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set\n"
-            )
-
-        # Paso 3: Ejecutar build (esto generará sdkconfig usando sdkconfig.defaults)
-        error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH, 'build'])
-        if error != 0:
-            raise Exception("Fallo al generar sdkconfig con build")
+        ACTUAL_TARGET = target_board 
         
-        # Cambiar la frecuencia de FreeRTOS
-        error = do_cmd(req_data, ['sed', '-i', 's/^CONFIG_FREERTOS_HZ=.*/CONFIG_FREERTOS_HZ=1000/', f'{BUILD_PATH}/sdkconfig'])
-        if error != 0:
-            print("Error al modificar la frecuencia de FreeRTOS")
-            raise Exception
-        print("Frecuencia de FreeRTOS modificada correctamente")
-        
-        try:
-          error = do_cmd_output(req_data, ['idf.py', '-C', BUILD_PATH, 'set-target', target_board])
-        except Exception as e: 
-          print(f"Error al cambiar el target board:{e}")
-          raise Exception  
-
-        error = do_cmd(req_data, ['sed', '-i', 's/^CONFIG_FREERTOS_HZ=.*/CONFIG_FREERTOS_HZ=1000/', f'{BUILD_PATH}/sdkconfig'])
-        if error != 0:
-            print("Error al modificar la frecuencia de FreeRTOS")
-            raise Exception
-        print("Frecuencia de FreeRTOS modificada correctamente")
-        ACTUAL_TARGET = target_board
-        
-        
-    error = do_cmd_output(req_data, [
-        'sed', '-i',
-        r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=.*/#/',
-        f'{BUILD_PATH}/sdkconfig'
-    ])
-    if error != 0:
-      print("Error during Memory Disable")
-      raise Exception
-    print("Memory Disable")
-    time.sleep(1)
-    error = do_cmd_output(req_data, [
-        'sed', '-i',
-        r's/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=.*/# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set/',
-        f'{BUILD_PATH}/sdkconfig'
-    ])
-    if error != 0:
-      print("Error during Memory Disable")
-      raise Exception
-
     if error == 0:
       error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
     if error == 0:
