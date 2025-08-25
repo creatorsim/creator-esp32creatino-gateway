@@ -178,7 +178,11 @@ extern "C" bool serial_find(const char *target) {
 }
 
 extern "C" bool serial_findUntil(const char *target, const char *terminator)  {
-    bool result = Serial.findUntil(target, terminator);
+    static char buffer[1024]; 
+    int len = Serial.readBytesUntil(*terminator, buffer, sizeof(buffer) - 1);
+    buffer[len] = '\0'; 
+
+    bool result = (strstr(buffer, target) != nullptr);
     vTaskDelay(1);
     return result;
 }
