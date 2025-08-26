@@ -1,20 +1,6 @@
 ####################################################################
-#########CREATOR aux library 4  ARDUINO proyects in RISC V #########
+#########CREATOR aux library   ARDUINO proyects in RISC V #########
 ####################################################################
-# Variables comunes a utilizar en Arduino
-# Definiciones de constantes globales
-.equ LED_BUILTIN, 30        # Define LED_BUILTIN como 30
-.equ OUTPUT, 0x03           # Define OUTPUT como 0x03
-.equ HIGH, 0x1              # Define HIGH como 0x1
-.equ LOW, 0x0               # Define LOW como 0x0
-.equ true, 1                # Define TRUE como 1
-
-# Sección de datos
-.data
-.align 2                    # Alinea a 4 bytes (2^2 = 4 bytes)
-    space:   .zero 100 #Espacio para el buffer
-    cr_newline: .byte 0x0A 
-# Variables globales
 .text
 # Sustituto de ecall
 .globl cr_ecall
@@ -637,39 +623,36 @@ cr_detachInterrupt:
 .global cr_digitalPinToInterrupt
 #(((uint8_t)digitalPinToGPIONumber(p)) < NUM_DIGITAL_PINS) ? (p) : NOT_AN_INTERRUPT
 cr_digitalPinToInterrupt:
-    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
-    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
-    sw t0, 0(sp)           # Guardar t0
-    sw t1, 4(sp)           # Guardar t1
-    sw t2, 8(sp)           # Guardar t2
-    sw t3, 12(sp)          # Guardar t3
-    sw t4, 16(sp)          # Guardar t4
-    sw t5, 20(sp)          # Guardar t5
-    sw t6, 24(sp)          # Guardar t6
+    addi sp, sp, -36       # Reservar espacio para ra + t0-t6 + argumento original (9 * 4 bytes = 36 bytes)
+    sw ra, 32(sp)          # Guardar ra
+    sw t0, 0(sp)
+    sw t1, 4(sp)
+    sw t2, 8(sp)
+    sw t3, 12(sp)
+    sw t4, 16(sp)
+    sw t5, 20(sp)
+    sw t6, 24(sp)
+    sw a0, 28(sp)          # Guardar argumento original (p)
     jal ra, cr_digitalPinToGPIONumber 
-    ##
     li t1, 49            
     bltu a0, t1, valid_pin 
     li a0, -1             # NOT_AN_INTERRUPT
     j end_function
-    lw t0, 0(sp)           # Restaurar t0
-    lw t1, 4(sp)           # Restaurar t1
-    lw t2, 8(sp)           # Restaurar t2
-    lw t3, 12(sp)          # Restaurar t3
-    lw t4, 16(sp)          # Restaurar t4
-    lw t5, 20(sp)          # Restaurar t5
-    lw t6, 24(sp)          # Restaurar t6
-    lw ra, 28(sp)          # Restaurar ra
-    addi sp, sp, 32        # Liberar espacio del stack
-    ret
 
 valid_pin:
-    lw a0, 0(sp)          # Restaurar el argumento original (p)
+    lw a0, 28(sp)         # Restaurar el argumento original (p)
 
 end_function:
-    lw ra, 0(sp)          # Restaurar RA
-    addi sp, sp, 4        # Liberar la pila
-    ret       
+    lw t0, 0(sp)
+    lw t1, 4(sp)
+    lw t2, 8(sp)
+    lw t3, 12(sp)
+    lw t4, 16(sp)
+    lw t5, 20(sp)
+    lw t6, 24(sp)
+    lw ra, 32(sp)
+    addi sp, sp, 36
+    ret     
 
 .extern pulseIn
 .global cr_pulseIn
@@ -769,15 +752,15 @@ cr_shiftOut:
 .extern interrupts
 .globl cr_interrupts     
 cr_interrupts:
-    addi sp, sp, -32       # Reservar espacio para ra + t0-t6 (1 + 7 registros = 8 * 4 bytes = 32 bytes)
-    sw ra, 28(sp)          # Guardar ra en la parte superior del frame
-    sw t0, 0(sp)           # Guardar t0
-    sw t1, 4(sp)           # Guardar t1
-    sw t2, 8(sp)           # Guardar t2
-    sw t3, 12(sp)          # Guardar t3
-    sw t4, 16(sp)          # Guardar t4
-    sw t5, 20(sp)          # Guardar t5
-    sw t6, 24(sp)          # Guardar t6
+    addi sp, sp, -32       
+    sw ra, 28(sp)          
+    sw t0, 0(sp)           
+    sw t1, 4(sp)           
+    sw t2, 8(sp)           
+    sw t3, 12(sp)          
+    sw t4, 16(sp)          
+    sw t5, 20(sp)          
+    sw t6, 24(sp)          
     li a0, 1
     call vPortClearInterruptMaskFromISR
     lw t0, 0(sp)           # Restaurar t0
@@ -797,7 +780,7 @@ cr_noInterrupts:
     addi sp, sp, -8       # Reservar espacio en el stack
     sw ra, 4(sp)
     call xPortSetInterruptMaskFromISR
-    lw ra, 4(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 4(sp)           
     addi sp, sp, 8      # Liberar el espacio del stack
     ret     
 # Characters
@@ -807,7 +790,7 @@ cr_isDigit:
     addi sp, sp, -4
     sw ra, 0(sp)
     call isdigit
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -821,7 +804,7 @@ cr_isAlpha:
     addi sp, sp, -4     
     sw ra, 0(sp)          
     call isalpha
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -835,7 +818,7 @@ cr_isAlphaNumeric:
     addi sp, sp, -4     
     sw ra, 0(sp)
     call    isalnum
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -849,7 +832,7 @@ cr_isAscii:
     sw ra, 0(sp) 
     mv      a0,a5
     call    isascii
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -863,7 +846,7 @@ cr_isControl:
     sw ra, 0(sp) 
     mv      a0,a5
     call    iscntrl
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -877,7 +860,7 @@ cr_isPunct:
     sw ra, 0(sp) 
     mv      a0,a5
     call    ispunct
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -891,7 +874,7 @@ cr_isHexadecimalDigit:
     sw ra, 0(sp) 
     mv      a0,a5
     call    isxdigit
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -905,7 +888,7 @@ cr_isUpperCase:
     sw ra, 0(sp)
     mv      a0,a5
     call    isupper
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -919,7 +902,7 @@ cr_isLowerCase:
     sw ra, 0(sp) 
     mv      a0,a5
     call    islower
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -933,7 +916,7 @@ cr_isPrintable:
     sw ra, 0(sp) 
     mv      a0,a5
     call    isprint
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -948,7 +931,7 @@ cr_isGraph:
     addi sp, sp, -4     
     sw ra, 0(sp) 
     call    isprint
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4
     mv      a5,a0
     beq     a5,zero,.L2
@@ -991,13 +974,13 @@ cr_isWhitespace:
 .globl cr_delay
 cr_delay:
     li t0, 1000
-    mul a0, a0, t0 #(creator_udelay uses microseconds)
+    mul a0, a0, t0  #(creator_udelay uses microseconds)
     addi sp, sp, -4       
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
+    sw ra, 0(sp)     
     call    creator_udelay
-    lw ra, 0(sp)     # Recupera el valor de ra
+    lw ra, 0(sp)     
     addi sp, sp, 4
-    jr ra             # Retorna al programa principal
+    jr ra             
 .globl cr_delayMicroseconds
 cr_delayMicroseconds:
     addi sp, sp, -4       
@@ -1014,16 +997,6 @@ cr_delayMicroseconds:
 .L3:
     li      a0,1
     jr      ra                    
-# Random
-/*.globl cr_random
-.extern creator_random
-cr_random:
-    addi sp, sp, -4       
-    sw ra, 0(sp)     # Guardar el valor de ra (return address)
-    call    creator_random
-    lw ra, 0(sp)     # Recupera el valor de ra
-    addi sp, sp, 4
-    jr ra*/             # Retorna al programa principal  
 .globl cr_randomSeed
 cr_randomSeed:
     mv t0, a0        # Valor semilla
@@ -1389,7 +1362,7 @@ cr_serial_parseInt: #Lee números
 #     lw x30, 4(sp)
 #     lw x31, 0(sp)
 #     addi sp, sp, 128
-#     lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+#     lw ra, 0(sp)           
 #     addi sp, sp, 4       # Liberar el espacio del stack
 
 #     add t0, a0, zero
@@ -1477,7 +1450,7 @@ aux_readBytes: #Serial.readBytes(buffer, length) lee letras
     lw x30, 4(sp)
     lw x31, 0(sp)
     addi sp, sp, 128
-    lw ra, 0(sp)          # Restaurar el registro RA desde el stack
+    lw ra, 0(sp)           
     addi sp, sp, 4       # Liberar el espacio del stack
 
     add t0, a0, zero
