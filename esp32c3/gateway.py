@@ -277,9 +277,9 @@ def read_gdbgui_state(req_data):
 
 
 def check_uart_connection():
-    """ Verifica si el puerto UART está disponible """
+    """ Checks UART devices """
     devices = glob.glob('/dev/ttyUSB*')
-    logging.debug("Dispositivos encontrados:", devices)
+    logging.debug(f"Found devices: {devices}")
     if "/dev/ttyUSB0" in devices:
         logging.info("Found UART.")
         return 0
@@ -289,10 +289,48 @@ def check_uart_connection():
     else:
         logging.error("NO UART port found.")
         return 1
+    
+def check_jtag_connection():
+    """ Checks JTAG devices """
+    command = ["lsusb"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5)  
+        if output:
+            output_text = output.decode(errors="ignore")
+            if "JTAG" in output_text:
+                logging.info("JTAG found")
+                return True
+            else:
+                logging.warning("JTAG missing")
+                return False
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
+    except Exception as e:
+        logging.error(f"Error checking JTAG: {e}")
+        return None
+    return False    
+# --- (6.2) Debug processes monitoring functions ---
 
+def check_gdb_connection():
+    """ Checks gdb status """
+    command = ["lsof", "-i", ":3333"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5) 
+        logging.debug("GDB connection output: %s", output.decode())
+        return output.decode()
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
+        logging.error(" GDB:Timeout waiting for GDB connection.")
+    except Exception as e:
+        logging.error(f"Error checking GDB: {e}")
+        return None
+    return False
 
-
-def monitor_gdb_output(req_data, cmd_args, name):
+def monitor_openocd_output(req_data, cmd_args, name):
     logfile_path = os.path.join(BUILD_PATH, f"{name}.log")
     try:
         print('A')
@@ -311,17 +349,60 @@ def monitor_gdb_output(req_data, cmd_args, name):
         logging.info(process_holder.keys())
         return process_holder[name]
     except Exception as e:
-        logging.error(f"Error al ejecutar el comando {name}: {e}")
+        logging.error(f"Error executing command {name}: {e}")
         process_holder.pop(name, None)
         return None
+    
+def kill_all_processes(process_name):
+    try:
+        if not process_name:
+            logging.error("El nombre del proceso no puede estar vacío.")
+            return 1
 
+        # Comando para obtener los PIDs de los procesos
+        get_pids_cmd = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}'"
+        result = subprocess.run(get_pids_cmd, shell=True, capture_output=True, text=True)
 
+        #  PIDs list
+        pids = result.stdout.strip().split()
+        
+        if not pids:
+            logging.warning(f"Not processes found '{process_name}'.")
+            return 1  # Devuelve 1 para indicar que no se hizo nada
 
+        # Ejecuta kill solo si hay PIDs
+        kill_cmd = f"kill -9 {' '.join(pids)}"
+        result = subprocess.run(kill_cmd, shell=True, capture_output=True, timeout=120, check=False)
+
+        if result.returncode != 0:
+            logging.error(f"Error al intentar matar los procesos {process_name}. Salida: {result.stderr.strip()}")
+        else:
+            logging.info(f"Todos los procesos '{process_name}' han sido eliminados.")
+        
+        return result.returncode
+
+    except subprocess.TimeoutExpired as e:
+        logging.error(f"El proceso excedió el tiempo de espera: {e}")
+        return 1
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error al ejecutar el comando: {e}")
+        return 1
+
+    except Exception as e:
+        logging.error(f"Ocurrió un error inesperado: {e}")
+        return 1
+
+    
+# (6.3) OpenOCD Function
 def start_openocd_thread(req_data):
+    target_board       = req_data['target_board']
+    route = BUILD_PATH + '/openocd_scripts/openscript_' + target_board + '.cfg'
+    logging.info(f"OpenOCD route: {route}")
     try:
         thread = threading.Thread(
-            target=monitor_gdb_output,
-            args=(req_data, ['idf.py', '-C', BUILD_PATH, 'openocd'], 'openocd'),
+            target=monitor_openocd_output,
+            args=(req_data, ['openocd', '-f', route], 'openocd'),
             daemon=True
         )
         thread.start()
@@ -331,37 +412,18 @@ def start_openocd_thread(req_data):
         req_data['status'] += f"Error starting OpenOCD: {str(e)}\n"
         logging.error(f"Error starting OpenOCD: {str(e)}")
         return None
-    
+# (6.4) GDBGUI function    
 def start_gdbgui(req_data):
     route = os.path.join(BUILD_PATH, 'gdbinit')
+    logging.debug(f"GDB route: {route}")
+    route = os.path.join(BUILD_PATH, 'gdbinit')
+    if os.path.exists(route) and os.path.exists("./gbdscript.gdb"):
+        logging.debug(f"GDB route: {route} exists.")
+    else:
+        logging.error(f"GDB route: {route} does not exist.")
+        req_data['status'] += f"GDB route: {route} does not exist.\n"
+        return jsonify(req_data)
     req_data['status'] = ''
-    # Starting up GDB session
-    logging.info("Starting GDB...") 
-    gdb_cmd = ['idf.py', '-C', BUILD_PATH, 'gdb', '-x', route]
-    try:
-      subprocess.Popen(gdb_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-    except Exception as e:
-        req_data['status'] += f"Error during GDB setup: {e}\n"
-        return jsonify(req_data)
-    try:
-        output = check_gdb_connection()
-        # while "riscv32-e" not in output:
-        #     time.sleep(1)
-        #     output = check_gdb_connection() 
-        timeout = 10  # segundos
-        start = time.time()
-        while ("riscv32-e" not in output or "CLOSE_WAIT" in output) and time.time() - start < timeout:
-            time.sleep(1)
-            output = check_gdb_connection()
-        if "riscv32-e" not in output:
-            req_data['status'] += "Timeout waiting for GDB connection.\n"
-            return jsonify(req_data)                
-        logging.debug("'riscv32-e' detectado en el puerto 3333. Ejecutando kill_all_processes.")
-        kill_all_processes("riscv32-e")   
-    except Exception as e:
-        req_data['status'] += f"Error during GDB setup: {e}\n"
-        return jsonify(req_data)
     if check_uart_connection:
       logging.info("Starting GDBGUI...")
       gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
@@ -390,7 +452,7 @@ def start_gdbgui(req_data):
       req_data['status'] += f"UART not connected: {e}\n"
     return jsonify(req_data)
           
-        
+
 
 def kill_all_processes(process_name):
   try:
@@ -466,7 +528,7 @@ def do_debug_request(request):
         if error != 0:
             req_data['status'] += "Build error.\n"
             return jsonify(req_data)
-
+        logging.debug("Delete previous work")
         # Clean previous debug system
         if error == 0:
             if 'openocd' in process_holder:
@@ -480,13 +542,14 @@ def do_debug_request(request):
                 return jsonify(req_data)
 
             # Start OpenOCD
+            logging.info("Starting OpenOCD...")
             openocd_thread = start_openocd_thread(req_data)
             while process_holder.get('openocd') is None:
               time.sleep(1)
               #start_openocd_thread(req_data)
 
             # Start gdbgui   
-            logging.info("Starting gdbgui")
+            #logging.info("Starting gdbgui")
             error = start_gdbgui(req_data)
             if error != 0:
                 req_data['status'] += "Error starting gdbgui\n"
