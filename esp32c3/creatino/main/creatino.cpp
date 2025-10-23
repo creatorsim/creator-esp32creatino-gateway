@@ -283,3 +283,13 @@ extern "C" int cr_millis() {
 extern "C" int cr_digitalPinToGPIONumber(int pin) {
     return (int)digitalPinToGPIONumber((int8_t)pin);
 }
+
+extern "C" void aux_tone(uint8_t pin, unsigned int freq, unsigned long duration) {
+    tone(pin, freq, duration);
+    vTaskDelay(1);
+}
+
+extern "C" void aux_noTone(uint8_t pin) {
+    noTone(pin);
+    vTaskDelay(1);
+}

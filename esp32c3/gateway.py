@@ -105,7 +105,15 @@ creatino_functions = [
     "serial_readString",
     "serial_readStringUntil",
     "serial_write",
-    "serial_printf"
+    "serial_printf",
+    "tone",
+    "noTone",
+    "shiftOut",
+    "shiftIn",
+    "pulseIn",
+    "pulseInLong",
+    "pulseOut"
+
 ]
 
 stop_thread = False
@@ -426,7 +434,7 @@ def start_gdbgui(req_data):
     req_data['status'] = ''
     if check_uart_connection:
       logging.info("Starting GDBGUI...")
-      gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '-x', route, 'monitor']
+      gdbgui_cmd = ['idf.py', '-C', BUILD_PATH, 'gdbgui', '--gdbinit', route, 'monitor']
       time.sleep(5)
       try:
           process_holder['gdbgui'] = subprocess.run(
