@@ -22,7 +22,6 @@
 #
 
 
-
 import re
 from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS, cross_origin
@@ -34,8 +33,8 @@ import logging
 import shutil
 import glob
 
-BUILD_PATH = './creator' #By default we call the classics ;)
-ACTUAL_TARGET = ''
+BUILD_PATH = "./creator"  # By default we call the classics ;)
+ACTUAL_TARGET = ""
 arduino = False
 
 creatino_functions = [
@@ -112,69 +111,83 @@ creatino_functions = [
     "shiftIn",
     "pulseIn",
     "pulseInLong",
-    "pulseOut"
-
+    "pulseOut",
 ]
 
-stop_thread = False
 # Diccionario para almacenar el proceso
 process_holder = {}
-#Stopping thread
-stop_event = threading.Event()
 
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+
+class CrFunctionNotAllowed(Exception):
+    pass
+
+
+# Adapt assembly file...
+def add_space_after_comma(text):
+    return re.sub(r",([^\s])", r", \1", text)
+
 
 #  EXIT order
 def handle_exit(sig, frame):
     try:
-      print("\n🔴 Cleaning gateway...")
-      cmd_array = ['idf.py','-C', './creatino','fullclean']
-      subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
-      cmd_array = ['idf.py','-C', './creator','fullclean']
-      subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
-      carpeta = './creatino/managed_components'
+        print("\n🔴 Cleaning gateway...")
+        cmd_array = ["idf.py", "-C", "./creatino", "fullclean"]
+        subprocess.run(
+            cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120
+        )
+        cmd_array = ["idf.py", "-C", "./creator", "fullclean"]
+        subprocess.run(
+            cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120
+        )
+        carpeta = "./creatino/managed_components"
 
-      # Verificar si la carpeta existe antes de intentar eliminarla
-      if os.path.exists(carpeta):
-          shutil.rmtree(carpeta)
-          print(f"La carpeta '{carpeta}' ha sido eliminada.")
-      else:
-          print(f"La carpeta '{carpeta}' no existe.")
+        # Verificar si la carpeta existe antes de intentar eliminarla
+        if os.path.exists(carpeta):
+            shutil.rmtree(carpeta)
+            print(f"La carpeta '{carpeta}' ha sido eliminada.")
+        else:
+            print(f"La carpeta '{carpeta}' no existe.")
 
-      print("✅ Closing program...")
-      sys.exit(0)
+        print("✅ Closing program...")
+        sys.exit(0)
     except Exception as e:
-      print(f"ERROR:{e} ")
+        print(f"ERROR:{e} ")
+
 
 ####----Cleaning functions----
 def do_fullclean_request(request):
-  try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    req_data['status'] = ''
-    global BUILD_PATH
-    BUILD_PATH = './creator'
-    error = check_build()
-    # flashing steps...
-    if error ==0:
-      do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
-    if error == 0:
-       req_data['status'] += 'Full clean done.\n'    
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
-  return jsonify(req_data)  
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        req_data["status"] = ""
+        global BUILD_PATH
+        BUILD_PATH = "./creator"
+        error = check_build()
+        # flashing steps...
+        if error == 0:
+            do_cmd_output(req_data, ["idf.py", "-C", BUILD_PATH, "fullclean"])
+        if error == 0:
+            req_data["status"] += "Full clean done.\n"
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
+    return jsonify(req_data)
+
 
 def do_eraseflash_request(request):
-  try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    req_data['status'] = ''
-    global BUILD_PATH
-    BUILD_PATH = './creator'
-    error = check_build()
-    # flashing steps...
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        req_data["status"] = ""
+        global BUILD_PATH
+        BUILD_PATH = "./creator"
+        error = check_build()
+        # flashing steps...
 
     if error == 0:
       error = do_cmd_output(req_data, ['idf.py','-C', BUILD_PATH,'-p',target_device,'erase-flash'])
@@ -566,157 +579,153 @@ def do_debug_request(request):
             req_data['status'] += "Build error\n"
             
     except Exception as e:
-        req_data['status'] += f"Unexpected error: {str(e)}\n"
-        logging.error(f"Exception in do_debug_request: {e}")
+        req_data["status"] += str(e) + "\n"
 
     return jsonify(req_data)
 
 
-########----------
-
 # (1) Get form values
 def do_get_form(request):
-  try:
-    return send_file('gateway.html')
-  except Exception as e:
-    return str(e)
+    try:
+        return send_file("gateway.html")
+    except Exception as e:
+        return str(e)
+
 
 # Change to ArduinoMode
 def do_arduino_mode(request):
-  req_data = request.get_json()
-  statusChecker = req_data.get('arduino_support')
-  req_data['status'] = ''
-  global arduino
-  arduino = not statusChecker
-  print(f"Estado checkbox: {arduino} de tipo {type(statusChecker)}")    
-  return  req_data
- 
-def check_build():
-  global BUILD_PATH
-  try:
-    if arduino:
-      BUILD_PATH = './creatino'
-    else:
-      BUILD_PATH = './creator' 
-    return 0   
-  except Exception as e:
-    print("Error adapting assembly file: ", str(e))
-    return -1  
+    req_data = request.get_json()
+    statusChecker = req_data.get("arduino_support")
+    req_data["status"] = ""
+    global arduino
+    arduino = not statusChecker
+    print(f"Estado checkbox: {arduino} de tipo {type(statusChecker)}")
+    return req_data
 
-class CrFunctionNotAllowed(Exception):
-    pass
-# Adapt assembly file...
-def add_space_after_comma(text):
-    return re.sub(r',([^\s])', r', \1', text)
+
+def check_build():
+    global BUILD_PATH
+    try:
+        if arduino:
+            BUILD_PATH = "./creatino"
+        else:
+            BUILD_PATH = "./creator"
+        return 0
+    except Exception as e:
+        print("Error adapting assembly file: ", str(e))
+        return -1
+
 
 def creator_build(file_in, file_out):
-  try:
-    # open input + output files
-    fin  = open(file_in, "rt")
-    fout = open(file_out, "wt")
+    try:
+        # open input + output files
+        fin = open(file_in, "rt")
+        fout = open(file_out, "wt")
 
-    # write header
-    fout.write(".text\n")
-    fout.write(".type main, @function\n")
-    fout.write(".globl main\n")
+        # write header
+        fout.write(".text\n")
+        fout.write(".type main, @function\n")
+        fout.write(".globl main\n")
 
-    data = []
-    # for each line in the input file...
-    for line in fin:
-      line = add_space_after_comma(line)
-      data = line.strip().split()
-      # Creatino replace functions
-      if len(data) >= 3 and data[0] == 'jal':
-          ra_token = data[1].replace(',', '').strip()
-          func_token = data[2].replace(',', '').strip()
-          if ra_token == 'ra' and func_token in creatino_functions:
-              line = f"jal ra, cr_{func_token}\n"
+        data = []
+        # for each line in the input file...
+        for line in fin:
+            line = add_space_after_comma(line)
+            data = line.strip().split()
+            # Creatino replace functions
+            if len(data) >= 3 and data[0] == "jal":
+                ra_token = data[1].replace(",", "").strip()
+                func_token = data[2].replace(",", "").strip()
+                if ra_token == "ra" and func_token in creatino_functions:
+                    line = f"jal ra, cr_{func_token}\n"
 
-      if (len(data) > 0):
-        if any(token.startswith('cr_') for token in data):
-            if BUILD_PATH == './creator':
-                raise CrFunctionNotAllowed()
-        if (data[0] == 'rdcycle'):
-          fout.write("#### rdcycle" + data[1] + "####\n")
-          fout.write("addi sp, sp, -8\n")
-          fout.write("sw ra, 4(sp)\n")
-          fout.write("sw a0, 0(sp)\n")
+            if len(data) > 0:
+                if any(token.startswith("cr_") for token in data):
+                    if BUILD_PATH == "./creator":
+                        raise CrFunctionNotAllowed()
+                if data[0] == "rdcycle":
+                    fout.write("#### rdcycle" + data[1] + "####\n")
+                    fout.write("addi sp, sp, -8\n")
+                    fout.write("sw ra, 4(sp)\n")
+                    fout.write("sw a0, 0(sp)\n")
 
-          fout.write("jal ra, _rdcycle\n")
-          fout.write("mv "+ data[1] +", a0\n")
+                    fout.write("jal ra, _rdcycle\n")
+                    fout.write("mv " + data[1] + ", a0\n")
 
-          if data[1] != "a0":
-            fout.write("lw a0, 0(sp)\n")
-          fout.write("lw ra, 4(sp)\n")
-          fout.write("addi sp, sp, 8\n")
-          fout.write("####################\n")
-          continue
+                    if data[1] != "a0":
+                        fout.write("lw a0, 0(sp)\n")
+                    fout.write("lw ra, 4(sp)\n")
+                    fout.write("addi sp, sp, 8\n")
+                    fout.write("####################\n")
+                    continue
 
-        if (data[0] == 'ecall' and BUILD_PATH == './creatino'):
-          fout.write("#### ecall ####\n")
-          fout.write("  addi sp, sp, -4\n")
-          fout.write("  sw ra, 0(sp)\n")
+                if data[0] == "ecall" and BUILD_PATH == "./creatino":
+                    fout.write("#### ecall ####\n")
+                    fout.write("  addi sp, sp, -4\n")
+                    fout.write("  sw ra, 0(sp)\n")
 
-          fout.write("  jal ra, cr_ecall\n")
+                    fout.write("  jal ra, cr_ecall\n")
 
-          fout.write("  lw ra, 0(sp)\n")
-          fout.write("  addi sp, sp, 4\n")
-          fout.write("####################\n")
-          continue
-        
-      fout.write(line)
+                    fout.write("  lw ra, 0(sp)\n")
+                    fout.write("  addi sp, sp, 4\n")
+                    fout.write("####################\n")
+                    continue
 
-    # close input + output files
-    fin.close()
-    fout.close()
-    return 0
+            fout.write(line)
 
-  except CrFunctionNotAllowed:
-    print("Error: cr_ functions are not supported in this mode.")
-    return 2
-  except Exception as e:
-    print("Error adapting assembly file: ", str(e))
-    return -1
-  
+        # close input + output files
+        fin.close()
+        fout.close()
+        return 0
+
+    except CrFunctionNotAllowed:
+        print("Error: cr_ functions are not supported in this mode.")
+        return 2
+    except Exception as e:
+        print("Error adapting assembly file: ", str(e))
+        return -1
+
+
 # (3) Run program into the target board
 def do_monitor_request(request):
-  try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    req_data['status'] = ''
-    check_build()
-    stop_event.set() # Detener el hilo de monitoreo
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        req_data["status"] = ""
+        check_build()
+        logging.info("Monitor")
 
-    if 'openocd' in process_holder:
-      logging.debug('Killing OpenOCD')
-      kill_all_processes("openocd")
-      process_holder.pop('openocd', None)
+        if "openocd" in process_holder:
+            logging.debug("Killing OpenOCD")
+            kill_all_processes("openocd")
+            process_holder.pop("openocd", None)
 
-    if 'gdbgui' in process_holder:
-      logging.debug('Killing GDBGUI')
-      kill_all_processes("gdbgui")
-      process_holder.pop('gdbgui', None)
+        if "gdbgui" in process_holder:
+            logging.debug("Killing GDBGUI")
+            kill_all_processes("gdbgui")
+            process_holder.pop("gdbgui", None)
 
-    error = check_uart_connection()
-    if error != 0:
-      raise Exception("No UART port found") 
-    
-    
-    build_dir = BUILD_PATH + '/build'
-    logging.info(f"Checking for build directory: {build_dir}")
-    if not os.listdir(build_dir):
-      raise Exception("No build found. Please, build the program first.") 
-    logging.info("Build directory is not empty, proceeding with monitor...")
-     
+        error = check_uart_connection(target_device)
+        if error != 0:
+            raise Exception("No UART port found")
 
-    error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH,'-p', target_device, 'monitor']) 
-    if error == 0:
-      req_data['status'] += 'Monitoring program success.\n'  
+        build_dir = BUILD_PATH + "/build"
+        logging.info(f"Checking for build directory: {build_dir}")
+        if not os.listdir(build_dir):
+            raise Exception("No build found. Please, build the program first.")
+        logging.info("Build directory is not empty, proceeding with monitor...")
 
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
+        error = do_cmd(
+            req_data, ["idf.py", "-C", BUILD_PATH, "-p", target_device, "monitor"]
+        )
+        if error == 0:
+            req_data["status"] += "Monitoring program success.\n"
 
-  return jsonify(req_data)  
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
+
+    return jsonify(req_data)
+
 
 def do_cmd(req_data, cmd_array):
     """
@@ -724,304 +733,756 @@ def do_cmd(req_data, cmd_array):
     """
     try:
         # Execute the command normally
-        result = subprocess.run(cmd_array, capture_output=False, timeout=120, check=True)  
+        result = subprocess.run(
+            cmd_array, capture_output=False, timeout=120, check=True
+        )
     except Exception as e:
-      pass
+        pass
 
     if result.stdout != None:
-      req_data['status'] += result.stdout.decode('utf-8') + '\n'
+        req_data["status"] += result.stdout.decode("utf-8") + "\n"
     if result.returncode != None:
-      req_data['error']   = result.returncode
+        req_data["error"] = result.returncode
 
-    return req_data['error']
+    return req_data["error"]
 
 
 def do_cmd_output(req_data, cmd_array):
-  try:
-    result = subprocess.run(cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
-  except:
-    pass
+    try:
+        result = subprocess.run(
+            cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120
+        )
+    except:
+        pass
 
-  if result.stdout != None:
-    req_data['status'] += result.stdout.decode('utf-8') + '\n'
-  if result.returncode != None:
-    req_data['error']   = result.returncode
-    
+    if result.stdout != None:
+        req_data["status"] += result.stdout.decode("utf-8") + "\n"
+    if result.returncode != None:
+        req_data["error"] = result.returncode
 
-  return req_data['error']
+    return req_data["error"]
 
 
 # (2) Flasing assembly program into target board
 def do_flash_request(request):
-  try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    target_board       = req_data['target_board']
-    asm_code           = req_data['assembly']
-    req_data['status'] = ''
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        target_board = req_data["target_board"]
+        asm_code = req_data["assembly"]
+        req_data["status"] = ""
 
-    # create temporal assembly file
-    text_file = open("tmp_assembly.s", "w")
-    ret = text_file.write(asm_code)
-    text_file.close()
-    global BUILD_PATH
-    global stop_event
-    global ACTUAL_TARGET
-    BUILD_PATH = './creator'
-    # check arduinoCheck
-    error = check_build()
+        # create temporal assembly file
+        text_file = open("tmp_assembly.s", "w")
+        ret = text_file.write(asm_code)
+        text_file.close()
+        global BUILD_PATH
+        global ACTUAL_TARGET
+        BUILD_PATH = "./creator"
+        # check arduinoCheck
+        error = check_build()
 
-    if 'openocd' in process_holder:
-      logging.debug('Killing OpenOCD')
-      kill_all_processes("openocd")
-      process_holder.pop('openocd', None)
+        if "openocd" in process_holder:
+            logging.debug("Killing OpenOCD")
+            kill_all_processes("openocd")
+            process_holder.pop("openocd", None)
 
-    if 'gdbgui' in process_holder:
-      logging.debug('Killing GDBGUI')
-      kill_all_processes("gdbgui")
-      process_holder.pop('gdbgui', None)
+        if "gdbgui" in process_holder:
+            logging.debug("Killing GDBGUI")
+            kill_all_processes("gdbgui")
+            process_holder.pop("gdbgui", None)
 
-    stop_event.set() # Detener el hilo de monitoreo  
 
-    # transform th temporal assembly file
-    filename= BUILD_PATH + '/main/program.s'
-    logging.debug("filename to transform in do_flash_request: ", filename)
-    error = creator_build('tmp_assembly.s', filename)
-    if error == 2:
-      logging.info("cr_ functions are not supported in this mode.")
-      raise Exception("cr_ functions are not supported in this mode.")
-    elif error != 0:
-      raise Exception
+        # transform th temporal assembly file
+        filename = BUILD_PATH + "/main/program.s"
+        logging.debug("filename to transform in do_flash_request: ", filename)
+        error = creator_build("tmp_assembly.s", filename)
+        if error == 2:
+            logging.info("cr_ functions are not supported in this mode.")
+            raise Exception("cr_ functions are not supported in this mode.")
+        elif error != 0:
+            raise Exception
 
-    # flashing steps...
-    if error == 0 :
-      error = check_uart_connection()
-    if error != 0:
-      req_data['status'] += 'No UART port found.\n'
-      raise  Exception("No UART port found")
-     
-    if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'fullclean'])
-    # if error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
-    if error == 0 and ACTUAL_TARGET != target_board:
-        # print("ACTUAL_TARGET: ", ACTUAL_TARGET)
-        print(f"File path: {BUILD_PATH}/sdkconfig")
-        sdkconfig_path = os.path.join(BUILD_PATH, "sdkconfig")
-        # 1. Crear/actualizar sdkconfig.defaults con la frecuencia correcta
-        defaults_path = os.path.join(BUILD_PATH, "sdkconfig.defaults")
-        if target_board == 'esp32c3':
-          with open(defaults_path, "w") as f:
-              f.write(
-                  "CONFIG_FREERTOS_HZ=1000\n"
-                  "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set\n"
-                  "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set\n"
-              )
-        elif target_board == 'esp32c6': 
-          with open(defaults_path, "w") as f:
-              f.write(
-                  "CONFIG_FREERTOS_HZ=1000\n"
-                  "# CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT is not set\n"
-              )     
-        
-        # 2. If previous sdkconfig exists, check if mem protection is disabled (for debug purposes)
-        if os.path.exists(sdkconfig_path):
-          if target_board == 'esp32c3':
-            #CONFIG_FREERTOS_HZ=1000
-            do_cmd(req_data, [
-                'sed', '-i',
-                r'/^CONFIG_FREERTOS_HZ=/c\CONFIG_FREERTOS_HZ=1000',
-                sdkconfig_path
-            ])
-            # Memory Protection
-            do_cmd(req_data, [
-                'sed', '-i',
-                r'/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=/c\# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set',
-                sdkconfig_path
-            ])
-            # Memory protection lock
-            do_cmd(req_data, [
-                'sed', '-i',
-                r'/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=/c\# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set',
-                sdkconfig_path
-            ])
-          elif target_board == 'esp32c6':
-            #CONFIG_FREERTOS_HZ=1000
-            do_cmd(req_data, [
-                'sed', '-i',
-                r'/^CONFIG_FREERTOS_HZ=/c\CONFIG_FREERTOS_HZ=1000',
-                sdkconfig_path
-            ])
-            # PMP IDRAM split
-            do_cmd(req_data, [
-                'sed', '-i',
-                r'/^CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT=/c\# CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT is not set',
-                sdkconfig_path
-            ])  
-          
-        # 3. Ahora sí, ejecutar set-target
-        error = do_cmd(req_data, ['idf.py', '-C', BUILD_PATH, 'set-target', target_board])
+        # flashing steps...
+        if error == 0:
+            error = check_uart_connection(target_device)
         if error != 0:
-            raise Exception("No se pudo establecer el target")
-        ACTUAL_TARGET = target_board 
-        
-    if error == 0:
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
-    if error == 0:
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH, '-p', target_device, 'flash'])
-    if error == 0:
-          req_data['status'] += 'Flash completed successfully.\n'  
+            req_data["status"] += "No UART port found.\n"
+            raise Exception("No UART port found")
 
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
-    print("Error in do_flash_request: ", str(e))
+        if error == 0 and BUILD_PATH == "./creator":
+            error = do_cmd(req_data, ["idf.py", "-C", BUILD_PATH, "fullclean"])
+        # if error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
+        if error == 0 and ACTUAL_TARGET != target_board:
+            # print("ACTUAL_TARGET: ", ACTUAL_TARGET)
+            print(f"File path: {BUILD_PATH}/sdkconfig")
+            sdkconfig_path = os.path.join(BUILD_PATH, "sdkconfig")
+            # 1. Crear/actualizar sdkconfig.defaults con la frecuencia correcta
+            defaults_path = os.path.join(BUILD_PATH, "sdkconfig.defaults")
+            if target_board == "esp32c3":
+                with open(defaults_path, "w") as f:
+                    f.write(
+                        "CONFIG_FREERTOS_HZ=1000\n"
+                        "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set\n"
+                        "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set\n"
+                    )
+            elif target_board == "esp32c6":
+                with open(defaults_path, "w") as f:
+                    f.write(
+                        "CONFIG_FREERTOS_HZ=1000\n"
+                        "# CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT is not set\n"
+                    )
 
-  return jsonify(req_data)
+            # 2. If previous sdkconfig exists, check if mem protection is disabled (for debug purposes)
+            if os.path.exists(sdkconfig_path):
+                if target_board == "esp32c3":
+                    # CONFIG_FREERTOS_HZ=1000
+                    do_cmd(
+                        req_data,
+                        [
+                            "sed",
+                            "-i",
+                            r"/^CONFIG_FREERTOS_HZ=/c\CONFIG_FREERTOS_HZ=1000",
+                            sdkconfig_path,
+                        ],
+                    )
+                    # Memory Protection
+                    do_cmd(
+                        req_data,
+                        [
+                            "sed",
+                            "-i",
+                            r"/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=/c\# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set",
+                            sdkconfig_path,
+                        ],
+                    )
+                    # Memory protection lock
+                    do_cmd(
+                        req_data,
+                        [
+                            "sed",
+                            "-i",
+                            r"/^CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=/c\# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set",
+                            sdkconfig_path,
+                        ],
+                    )
+                elif target_board == "esp32c6":
+                    # CONFIG_FREERTOS_HZ=1000
+                    do_cmd(
+                        req_data,
+                        [
+                            "sed",
+                            "-i",
+                            r"/^CONFIG_FREERTOS_HZ=/c\CONFIG_FREERTOS_HZ=1000",
+                            sdkconfig_path,
+                        ],
+                    )
+                    # PMP IDRAM split
+                    do_cmd(
+                        req_data,
+                        [
+                            "sed",
+                            "-i",
+                            r"/^CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT=/c\# CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT is not set",
+                            sdkconfig_path,
+                        ],
+                    )
+
+            # 3. Ahora sí, ejecutar set-target
+            error = do_cmd(
+                req_data, ["idf.py", "-C", BUILD_PATH, "set-target", target_board]
+            )
+            if error != 0:
+                raise Exception("No se pudo establecer el target")
+            ACTUAL_TARGET = target_board
+
+        if error == 0:
+            error = do_cmd(req_data, ["idf.py", "-C", BUILD_PATH, "build"])
+        if error == 0:
+            error = do_cmd(
+                req_data, ["idf.py", "-C", BUILD_PATH, "-p", target_device, "flash"]
+            )
+        if error == 0:
+            req_data["status"] += "Flash completed successfully.\n"
+
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
+        print("Error in do_flash_request: ", str(e))
+
+    return jsonify(req_data)
+
 
 # (4) Flasing assembly program into target board
 def do_job_request(request):
-  try:
-    req_data = request.get_json()
-    target_device      = req_data['target_port']
-    target_board       = req_data['target_board']
-    asm_code           = req_data['assembly']
-    req_data['status'] = ''
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        target_board = req_data["target_board"]
+        asm_code = req_data["assembly"]
+        req_data["status"] = ""
 
-    # create temporal assembly file
-    text_file = open("tmp_assembly.s", "w")
-    ret = text_file.write(asm_code)
-    text_file.close()
-    error = check_build('tmp_assembly.s')
-    # transform th temporal assembly file
-    filename= BUILD_PATH + '/main/program.s'
-    print("filename to transform in do_job_request: ", filename)
-    error = creator_build('tmp_assembly.s', filename)
-    if error != 0:
-        raise Exception("Error adapting assembly file...")
+        # create temporal assembly file
+        text_file = open("tmp_assembly.s", "w")
+        ret = text_file.write(asm_code)
+        text_file.close()
+        error = check_build("tmp_assembly.s")
+        # transform th temporal assembly file
+        filename = BUILD_PATH + "/main/program.s"
+        print("filename to transform in do_job_request: ", filename)
+        error = creator_build("tmp_assembly.s", filename)
+        if error != 0:
+            raise Exception("Error adapting assembly file...")
 
-    # flashing steps...
-    if error == 0 and BUILD_PATH == './creator':
-      error = do_cmd_output(req_data, ['idf.py',  'fullclean'])
-    """if error == 0 and BUILD_PATH = './creator':
-      error = do_cmd_output(req_data, ['idf.py',  'set-target', target_board])""" 
+        # flashing steps...
+        if error == 0 and BUILD_PATH == "./creator":
+            error = do_cmd_output(req_data, ["idf.py", "fullclean"])
+        """if error == 0 and BUILD_PATH = './creator':
+      error = do_cmd_output(req_data, ['idf.py',  'set-target', target_board])"""
 
-    if error == 0:
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH,'build'])
-    if error == 0:
-      error = do_cmd(req_data, ['idf.py','-C', BUILD_PATH, '-p', target_device, 'flash'])
+        if error == 0:
+            error = do_cmd(req_data, ["idf.py", "-C", BUILD_PATH, "build"])
+        if error == 0:
+            error = do_cmd(
+                req_data, ["idf.py", "-C", BUILD_PATH, "-p", target_device, "flash"]
+            )
 
-    if error == 0:
-      error = do_cmd_output(req_data, ['./gateway_monitor.sh', target_device, '50'])
-      error = do_cmd_output(req_data, ['cat', 'monitor_output.txt'])
-      error = do_cmd_output(req_data, ['rm', 'monitor_output.txt'])
+        if error == 0:
+            error = do_cmd_output(
+                req_data, ["./gateway_monitor.sh", target_device, "50"]
+            )
+            error = do_cmd_output(req_data, ["cat", "monitor_output.txt"])
+            error = do_cmd_output(req_data, ["rm", "monitor_output.txt"])
 
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
 
-  return jsonify(req_data)
+    return jsonify(req_data)
 
 
 # (5) Stop flashing
 def do_stop_flash_request(request):
-  try:
-    req_data = request.get_json()
-    req_data['status'] = ''
-    #Cleaning creatino 
-    error = do_cmd_output(req_data, ['idf.py','-C', './creatino','fullclean'])
-    if error == 0:
-      do_cmd(req_data, ['pkill',  'idf.py'])
+    try:
+        req_data = request.get_json()
+        req_data["status"] = ""
+        # Cleaning creatino
+        error = do_cmd_output(req_data, ["idf.py", "-C", "./creatino", "fullclean"])
+        if error == 0:
+            do_cmd(req_data, ["pkill", "idf.py"])
 
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
 
-  return jsonify(req_data)
+    return jsonify(req_data)
+
 
 def do_stop_monitor_request(request):
-  try:
-    req_data = request.get_json()
-    req_data['status'] = ''
-    print("Killing Monitor")
-    error = kill_all_processes("idf.py")
-    if error == 0:
-      req_data['status'] += 'Process stopped\n' 
-    
+    try:
+        req_data = request.get_json()
+        req_data["status"] = ""
+        print("Killing Monitor")
+        error = kill_all_processes("idf.py")
+        if error == 0:
+            req_data["status"] += "Process stopped\n"
 
-  except Exception as e:
-    req_data['status'] += str(e) + '\n'
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
 
-  return jsonify(req_data)
+    return jsonify(req_data)
 
+
+###---------- Debug Processs------
+
+
+#  Physical connections check
+def check_uart_connection(board):
+    """Checks UART devices"""
+    # LINUX
+    if board.startswith("/dev/ttyUSB"):
+        devices = glob.glob("/dev/ttyUSB*")
+        logging.debug(f"Found devices: {devices}")
+        if board in devices:
+            logging.info("Found UART.")
+            return 0
+        elif devices:
+            logging.error("Other UART devices found (Is the name OK?).")
+            return 0
+        else:
+            logging.error("NO UART port found.")
+            return 1
+    # WINDOWS
+    elif board.startswith("rfc2217"):
+        try:
+            ser = serial.serial_for_url(board, timeout=1)
+            ser.close()
+            logging.info("Found RFC2217 UART.")
+            return 0
+        except serial.SerialException as e:
+            logging.error(f"NO RFC2217 UART port found: {e}")
+            return 1
+    # MAC
+    elif board.startswith("/dev/cu.usb"):
+        devices = glob.glob("/dev/cu.usb*")
+        logging.debug(f"Found devices: {devices}")
+        if board in devices:
+            logging.info("Found UART.")
+            return 0
+        elif devices:
+            logging.error("Other UART devices found (Is the name OK?).")
+            return 0
+        else:
+            logging.error("NO UART port found.")
+            return 1
+
+
+def check_jtag_connection():
+    """Checks JTAG devices"""
+    command = ["lsusb"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5)
+        if output:
+            output_text = output.decode(errors="ignore")
+            if "JTAG" in output_text:
+                logging.info("JTAG found")
+                return True
+            else:
+                logging.warning("JTAG missing")
+                return False
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
+    except Exception as e:
+        logging.error(f"Error checking JTAG: {e}")
+        return None
+    return False
+
+
+# --- Debug Native processes monitoring functions ---
+
+
+def check_gdb_connection():
+    """Checks gdb status"""
+    command = ["lsof", "-i", ":3333"]
+    try:
+        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errs = lsof.communicate(timeout=5)
+        logging.debug("GDB connection output: %s", output.decode())
+        return output.decode()
+    except subprocess.TimeoutExpired:
+        lsof.kill()
+        output, errs = lsof.communicate()
+        logging.error(" GDB:Timeout waiting for GDB connection.")
+    except Exception as e:
+        logging.error(f"Error checking GDB: {e}")
+        return None
+    return False
+
+
+def monitor_openocd_output(req_data, cmd_args, name):
+    logfile_path = os.path.join(BUILD_PATH, f"{name}.log")
+    try:
+        with open(logfile_path, "a", encoding="utf-8") as logfile:
+            process_holder[name] = subprocess.Popen(
+                cmd_args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+            proc = process_holder[name]
+
+            # Logfile
+            for line in proc.stdout:
+                line = line.rstrip()
+                logfile.write(line + "\n")
+                logfile.flush()
+                logging.debug(f"[{name}] {line}")
+
+            proc.stdout.close()
+            retcode = proc.wait()
+            logging.debug(f"Process {name} finished with code {retcode}")
+            return proc
+
+    except Exception as e:
+        logging.error(f"Error executing command {name}: {e}")
+        process_holder.pop(name, None)
+        return None
+
+
+def kill_all_processes(process_name):
+    try:
+        if not process_name:
+            logging.error("El nombre del proceso no puede estar vacío.")
+            return 1
+
+        # Comando para obtener los PIDs de los procesos
+        get_pids_cmd = f"ps aux | grep '[{process_name[0]}]{process_name[1:]}' | awk '{{print $2}}'"
+        result = subprocess.run(
+            get_pids_cmd, shell=True, capture_output=True, text=True
+        )
+
+        #  PIDs list
+        pids = result.stdout.strip().split()
+
+        if not pids:
+            logging.warning(f"Not processes found '{process_name}'.")
+            return 1  # Devuelve 1 para indicar que no se hizo nada
+
+        # Ejecuta kill solo si hay PIDs
+        kill_cmd = f"kill -9 {' '.join(pids)}"
+        result = subprocess.run(
+            kill_cmd, shell=True, capture_output=True, timeout=120, check=False
+        )
+
+        if result.returncode != 0:
+            logging.error(
+                f"Error al intentar matar los procesos {process_name}. Salida: {result.stderr.strip()}"
+            )
+        else:
+            logging.info(f"Todos los procesos '{process_name}' han sido eliminados.")
+
+        return result.returncode
+
+    except subprocess.TimeoutExpired as e:
+        logging.error(f"El proceso excedió el tiempo de espera: {e}")
+        return 1
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error al ejecutar el comando: {e}")
+        return 1
+
+    except Exception as e:
+        logging.error(f"Ocurrió un error inesperado: {e}")
+        return 1
+
+
+# -------OpenOCD Function
+def start_openocd_thread(req_data):
+    target_board = req_data["target_board"]
+    route = BUILD_PATH + "/openocd_scripts/openscript_" + target_board + ".cfg"
+    logging.info(f"OpenOCD route: {route}")
+    try:
+        thread = threading.Thread(
+            target=monitor_openocd_output,
+            args=(req_data, ["openocd", "-f", route], "openocd"),
+            daemon=True,
+        )
+        thread.start()
+        logging.debug("Starting OpenOCD thread...")
+        return thread
+    except Exception as e:
+        req_data["status"] += f"Error starting OpenOCD: {str(e)}\n"
+        logging.error(f"Error starting OpenOCD: {str(e)}")
+        return None
+
+
+# -------GDBGUI function
+def start_gdbgui(req_data):
+    target_device = req_data["target_port"]
+    route = os.path.join(BUILD_PATH, "gdbinit")
+    logging.debug(f"GDB route: {route}")
+    route = os.path.join(BUILD_PATH, "gdbinit")
+    if os.path.exists(route) and os.path.exists("./gbdscript.gdb"):
+        logging.debug(f"GDB route: {route} exists.")
+    else:
+        logging.error(f"GDB route: {route} does not exist.")
+        req_data["status"] += f"GDB route: {route} does not exist.\n"
+        return jsonify(req_data)
+    req_data["status"] = ""
+    if check_uart_connection(target_device) != 0:
+        req_data["status"] += f"No UART found\n"
+        return jsonify(req_data)
+
+    logging.info("Starting GDBGUI...")
+    gdbgui_cmd = ["idf.py", "-C", BUILD_PATH, "gdbgui", "--gdbinit", route, "monitor"]
+    time.sleep(5)
+    try:
+        process_holder["gdbgui"] = subprocess.run(
+            gdbgui_cmd, stdout=sys.stdout, stderr=sys.stderr, text=True
+        )
+        if (
+            process_holder["gdbgui"].returncode != -9
+            and process_holder["gdbgui"].returncode != 0
+        ):
+            logging.error(
+                f"Command failed with return code {process_holder['gdbgui'].returncode}"
+            )
+
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to start GDBGUI: %s", e)
+        req_data[
+            "status"
+        ] += f"Error starting GDBGUI (code {e.returncode}): {e.stderr}\n"
+        return None
+    except Exception as e:
+        logging.error("Unexpected error in GDBGUI: %s", e)
+        req_data["status"] += f"Unexpected error starting GDBGUI: {e}\n"
+        return None
+
+    else:
+        req_data["status"] += f"UART not connected: {e}\n"
+    return jsonify(req_data)
+
+
+# --- Debug Remote  processes monitoring functions ---
+def running_in_docker():
+    try:
+        with open("/proc/1/cgroup", "rt") as f:
+            content = f.read()
+            if "docker" in content or "kubepods" in content or "containerd" in content:
+                return True
+    except Exception:
+        pass
+
+    try:
+        with open("/.dockerenv", "rt"):
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+# (4.6) Remote debug
+def openocd_alive(host="localhost", port=4444, timeout=1):
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return False
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return False
+
+# TODO: Check gdbinit archives when using arduino in docker
+def start_gdbgui_remote(req_data):
+    global BUILD_PATH
+    target_device = req_data["target_port"]: 
+    route = os.path.join(BUILD_PATH, "gdbinit_win")
+    if not (os.path.exists(route) and os.path.exists("./gbdscript_windows.gdb")):
+        logging.error(f"GDB route: {route} or gbdscript_windows.gdb does not exist.")
+        req_data[
+            "status"
+        ] += f"GDB route: {route} or gbdscript_windows.gdb does not exist.\n"
+        return jsonify(req_data)
+
+    logging.info("Starting GDBGUI remote...")
+    req_data["status"] = ""
+
+    gdbgui_cmd = [
+        "gdbgui",
+        "-g",
+        "riscv32-esp-elf-gdb build/hello_world.elf -x gdbinit_win",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5000",
+        "--no-browser",
+    ]
+    idf_cmd = ["idf.py", "-p", target_device, "monitor"]
+
+    try:
+        # Lanzar gdbgui en background
+        process_holder["gdbgui"] = subprocess.Popen(
+            gdbgui_cmd, stdout=sys.stdout, stderr=sys.stderr, text=True
+        )
+        logging.info("gdbgui started, PID: %d", process_holder["gdbgui"].pid)
+
+        # Ejecutar idf.py monitor y esperar a que termine
+        idf_proc = subprocess.run(
+            idf_cmd, stdout=sys.stdout, stderr=sys.stderr, text=True
+        )
+
+        if idf_proc.returncode != 0:
+            logging.error(
+                f"idf.py monitor failed with return code {idf_proc.returncode}"
+            )
+            req_data[
+                "status"
+            ] += f"idf.py monitor failed with return code {idf_proc.returncode}\n"
+        else:
+            logging.info("idf.py monitor finished successfully.")
+
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to start process: %s", e)
+        req_data[
+            "status"
+        ] += f"Error starting process (code {e.returncode}): {e.stderr}\n"
+        return jsonify(req_data)
+    except Exception as e:
+        logging.error("Unexpected error: %s", e)
+        req_data["status"] += f"Unexpected error: {e}\n"
+        return jsonify(req_data)
+
+    req_data["status"] += "Debug session finished.\n"
+    return jsonify(req_data)
+
+
+def openocd_shutdown(host="localhost", port=4444):
+    try:
+        with socket.create_connection((host, port), timeout=1) as s:
+            s.sendall(b"shutdown\n")
+        return True
+
+    except Exception as e:
+        logging.error(f"OpenOCD not closed correctly: {e}")
+        return False
+
+
+# --------Debug Function------
+def do_debug_request(request):
+    global process_holder
+    error = 0
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        req_data["status"] = ""
+        # (1.)Check .elf files in BUILD_PATH
+        route = BUILD_PATH + "/build"
+        logging.debug(f"Checking for ELF files in {route}")
+        if os.path.isdir(route) and os.listdir(route) is False:
+            req_data["status"] += "No ELF file found in build directory.\n"
+            logging.error("No ELF file found in build directory.")
+            return jsonify(req_data)
+        logging.debug("Delete previous work")
+        # (2) Check environment
+
+        if running_in_docker() == True:
+            logging.info("Running inside Docker.")
+            # Check UART
+            if check_uart_connection(target_device) != 0:
+                req_data["status"] += f"No UART found\n"
+                return jsonify(req_data)
+            # Check if Openocd  is connected in host
+            if not openocd_alive("host.docker.internal", 4444):
+                req_data["status"] += "OpenOCD not found in host."
+                logging.error("OpenOCD not found in host.")
+                return jsonify(req_data)
+            logging.info("OpenOCD running in host.")
+            # Start gdbgui remote
+            start_gdbgui_remote(req_data)
+            return jsonify(req_data)
+        # Clean previous debug system
+
+        if error == 0:
+            if "openocd" in process_holder:
+                logging.debug("Killing OpenOCD")
+                kill_all_processes("openocd")
+                process_holder.pop("openocd", None)
+            # Check UART
+            if check_uart_connection(target_device) != 0:
+                req_data["status"] += f"No UART found\n"
+                return jsonify(req_data)
+            # Check if JTAG is connected
+            if not check_jtag_connection():
+                req_data["status"] += "No JTAG found\n"
+                return jsonify(req_data)
+
+            # Start OpenOCD
+            logging.info("Starting OpenOCD...")
+            openocd_thread = start_openocd_thread(req_data)
+            while process_holder.get("openocd") is None:
+                time.sleep(1)
+                # start_openocd_thread(req_data)
+
+            # Start gdbgui
+            # logging.info("Starting gdbgui")
+            error = start_gdbgui(req_data)
+            if error != 0:
+                req_data["status"] += "Error starting gdbgui\n"
+                return jsonify(req_data)
+        else:
+            req_data["status"] += "Build error\n"
+
+    except Exception as e:
+        req_data["status"] += f"Unexpected error: {str(e)}\n"
+        logging.error(f"Exception in do_debug_request: {e}")
+
+    return jsonify(req_data)
 
 
 # Setup flask and cors:
-app  = Flask(__name__)
+app = Flask(__name__)
 cors = CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
+app.config["CORS_HEADERS"] = "Content-Type"
+
 
 # (1) GET / -> send gateway.html
 @app.route("/", methods=["GET"])
 @cross_origin()
 def get_form():
-  return do_get_form(request)
+    return do_get_form(request)
+
 
 # (2) POST /flash -> flash
 @app.route("/flash", methods=["POST"])
 @cross_origin()
 def post_flash():
-  try:
-    shutil.rmtree('build')
-  except Exception as e:
-    pass
+    try:
+        shutil.rmtree("build")
+    except Exception as e:
+        pass
 
-  return do_flash_request(request)
+    return do_flash_request(request)
+
 
 # (3) POST /debug -> debug
 @app.route("/debug", methods=["POST"])
 @cross_origin()
 def post_debug():
-  return do_debug_request(request)
+    return do_debug_request(request)
+
 
 @app.route("/monitor", methods=["POST"])
 @cross_origin()
 def post_monitor():
-  return do_monitor_request(request)
+    return do_monitor_request(request)
+
 
 # (4) POST /job -> flash + monitor
 @app.route("/job", methods=["POST"])
 @cross_origin()
 def post_job():
-  return do_job_request(request)
+    return do_job_request(request)
+
 
 # (5) POST /stop -> cancel
 @app.route("/stop", methods=["POST"])
 @cross_origin()
 def post_stop_flash():
-  return do_stop_flash_request(request)
+    return do_stop_flash_request(request)
+
 
 @app.route("/stopmonitor", methods=["POST"])
 @cross_origin()
 def post_stop_monitor():
-  return do_stop_monitor_request(request)
+    return do_stop_monitor_request(request)
+
 
 # (6) POST /fullclean -> clean
 @app.route("/fullclean", methods=["POST"])
 @cross_origin()
 def post_fullclean_flash():
-  return do_fullclean_request(request)
+    return do_fullclean_request(request)
+
 
 # (6) POST /fullclean -> clean
 @app.route("/eraseflash", methods=["POST"])
 @cross_origin()
 def post_erase_flash():
-  return do_eraseflash_request(request)
+    return do_eraseflash_request(request)
+
 
 # (7) POST /arduinoMode-> cancel
 @app.route("/arduinoMode", methods=["POST"])
 @cross_origin()
 def post_arduino_mode():
-  return do_arduino_mode(request)
+    return do_arduino_mode(request)
 
-#signal.signal(signal.SIGINT, handle_exit)
+
+# signal.signal(signal.SIGINT, handle_exit)
 
 
 # Run
-app.run(host='0.0.0.0', port=8080, use_reloader=False, debug=True)
+app.run(host="0.0.0.0", port=8080, use_reloader=False, debug=True)
