@@ -1,10 +1,12 @@
 delete breakpoints
-target extended-remote :3333
+target extended-remote host.docker.internal:3333
 set remotetimeout 10
 monitor reset halt          
 maintenance flush register-cache
+thbreak creator-esp.c:70
 b main
 continue
+step
 
 define hook-stop
     set $inst = *(unsigned int *)$pc
