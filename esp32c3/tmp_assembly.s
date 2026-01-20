@@ -1,8 +1,18 @@
 
 .data
-    delay:
+    time:
         .word 1000
 .text
+
+main:
+    addi sp, sp, -16       
+    sw ra, 12(sp)          
+    jal ra, initArduino    
+    jal ra, setup
+    lw ra, 12(sp)          
+    addi sp, sp, 16              
+    j loop
+    
 setup:
     li a0, 115200
     addi sp, sp, -4      
@@ -48,7 +58,7 @@ button_pressed:
     lw a0, 0(a0)
     addi sp, sp, -16      
     sw ra, 12(sp)
-    jal ra, cr_delay
+    jal ra, delay
     lw ra, 12(sp)          
     addi sp, sp, 16 
     
@@ -79,7 +89,7 @@ loop:
     lw a0, 0(a0)
     addi sp, sp, -16      
     sw ra, 12(sp)
-    jal ra, cr_delay
+    jal ra, delay
     lw ra, 12(sp)          
     addi sp, sp, 16 
 

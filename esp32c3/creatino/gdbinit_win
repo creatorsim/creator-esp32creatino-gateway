@@ -1,0 +1,2 @@
+source ./creatino/build/gdbinit/symbols
+source ./creatino/gbdscript_creatino_windows.gdb

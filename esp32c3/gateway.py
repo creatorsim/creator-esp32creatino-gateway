@@ -2,7 +2,7 @@
 
 
 #
-#  Copyright 2022-2025 Felix Garcia Carballeira, Diego Carmarmas Alonso, Alejandro Calderon Mateos, Elisa Utrilla Arroyo
+#  Copyright 2022-2026 CREATOR team
 #
 #  This file is part of CREATOR.
 #
@@ -20,8 +20,9 @@
 #  along with CREATOR.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-
-
+import socket
+import glob
+import shutil
 import re
 from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS, cross_origin
@@ -33,7 +34,7 @@ import logging
 import shutil
 import glob
 
-BUILD_PATH = "./creator"  # By default we call the classics ;)
+BUILD_PATH = "./creator"  
 ACTUAL_TARGET = ""
 arduino = False
 
@@ -114,9 +115,7 @@ creatino_functions = [
     "pulseOut",
 ]
 
-# Diccionario para almacenar el proceso
 process_holder = {}
-
 
 # Configure logging
 logging.basicConfig(
@@ -133,32 +132,6 @@ def add_space_after_comma(text):
     return re.sub(r",([^\s])", r", \1", text)
 
 
-#  EXIT order
-def handle_exit(sig, frame):
-    try:
-        print("\n🔴 Cleaning gateway...")
-        cmd_array = ["idf.py", "-C", "./creatino", "fullclean"]
-        subprocess.run(
-            cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120
-        )
-        cmd_array = ["idf.py", "-C", "./creator", "fullclean"]
-        subprocess.run(
-            cmd_array, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120
-        )
-        carpeta = "./creatino/managed_components"
-
-        # Verificar si la carpeta existe antes de intentar eliminarla
-        if os.path.exists(carpeta):
-            shutil.rmtree(carpeta)
-            print(f"La carpeta '{carpeta}' ha sido eliminada.")
-        else:
-            print(f"La carpeta '{carpeta}' no existe.")
-
-        print("✅ Closing program...")
-        sys.exit(0)
-    except Exception as e:
-        print(f"ERROR:{e} ")
-
 
 ####----Cleaning functions----
 def do_fullclean_request(request):
@@ -172,6 +145,7 @@ def do_fullclean_request(request):
         # flashing steps...
         if error == 0:
             do_cmd_output(req_data, ["idf.py", "-C", BUILD_PATH, "fullclean"])
+            do_cmd_output(req_data, ['rm','-rf', BUILD_PATH + '/build']) 
         if error == 0:
             req_data["status"] += "Full clean done.\n"
     except Exception as e:
@@ -584,6 +558,20 @@ def do_debug_request(request):
     return jsonify(req_data)
 
 
+def do_stop_monitor_request(request):
+    try:
+        req_data = request.get_json()
+        req_data["status"] = ""
+        print("Killing Monitor")
+        error = kill_all_processes("idf.py")
+        if error == 0:
+            req_data["status"] += "Process stopped\n"
+
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
+
+    return jsonify(req_data)
+
 # (1) Get form values
 def do_get_form(request):
     try:
@@ -592,7 +580,7 @@ def do_get_form(request):
         return str(e)
 
 
-# Change to ArduinoMode
+# **Arduino mode checkbox handling**
 def do_arduino_mode(request):
     req_data = request.get_json()
     statusChecker = req_data.get("arduino_support")
@@ -659,18 +647,6 @@ def creator_build(file_in, file_out):
                     fout.write("####################\n")
                     continue
 
-                if data[0] == "ecall" and BUILD_PATH == "./creatino":
-                    fout.write("#### ecall ####\n")
-                    fout.write("  addi sp, sp, -4\n")
-                    fout.write("  sw ra, 0(sp)\n")
-
-                    fout.write("  jal ra, cr_ecall\n")
-
-                    fout.write("  lw ra, 0(sp)\n")
-                    fout.write("  addi sp, sp, 4\n")
-                    fout.write("####################\n")
-                    continue
-
             fout.write(line)
 
         # close input + output files
@@ -685,52 +661,7 @@ def creator_build(file_in, file_out):
         print("Error adapting assembly file: ", str(e))
         return -1
 
-
-# (3) Run program into the target board
-def do_monitor_request(request):
-    try:
-        req_data = request.get_json()
-        target_device = req_data["target_port"]
-        req_data["status"] = ""
-        check_build()
-        logging.info("Monitor")
-
-        if "openocd" in process_holder:
-            logging.debug("Killing OpenOCD")
-            kill_all_processes("openocd")
-            process_holder.pop("openocd", None)
-
-        if "gdbgui" in process_holder:
-            logging.debug("Killing GDBGUI")
-            kill_all_processes("gdbgui")
-            process_holder.pop("gdbgui", None)
-
-        error = check_uart_connection(target_device)
-        if error != 0:
-            raise Exception("No UART port found")
-
-        build_dir = BUILD_PATH + "/build"
-        logging.info(f"Checking for build directory: {build_dir}")
-        if not os.listdir(build_dir):
-            raise Exception("No build found. Please, build the program first.")
-        logging.info("Build directory is not empty, proceeding with monitor...")
-
-        error = do_cmd(
-            req_data, ["idf.py", "-C", BUILD_PATH, "-p", target_device, "monitor"]
-        )
-        if error == 0:
-            req_data["status"] += "Monitoring program success.\n"
-
-    except Exception as e:
-        req_data["status"] += str(e) + "\n"
-
-    return jsonify(req_data)
-
-
 def do_cmd(req_data, cmd_array):
-    """
-    Execute a command and handle the output.
-    """
     try:
         # Execute the command normally
         result = subprocess.run(
@@ -761,8 +692,6 @@ def do_cmd_output(req_data, cmd_array):
         req_data["error"] = result.returncode
 
     return req_data["error"]
-
-
 # (2) Flasing assembly program into target board
 def do_flash_request(request):
     try:
@@ -776,12 +705,13 @@ def do_flash_request(request):
         text_file = open("tmp_assembly.s", "w")
         ret = text_file.write(asm_code)
         text_file.close()
+        #------CREATINO BUILD CHECK
         global BUILD_PATH
         global ACTUAL_TARGET
         BUILD_PATH = "./creator"
         # check arduinoCheck
         error = check_build()
-
+        #------
         if "openocd" in process_holder:
             logging.debug("Killing OpenOCD")
             kill_all_processes("openocd")
@@ -803,19 +733,11 @@ def do_flash_request(request):
         elif error != 0:
             raise Exception
 
-        # flashing steps...
-        if error == 0:
-            error = check_uart_connection(target_device)
-        if error != 0:
-            req_data["status"] += "No UART port found.\n"
-            raise Exception("No UART port found")
-
         if error == 0 and BUILD_PATH == "./creator":
             error = do_cmd(req_data, ["idf.py", "-C", BUILD_PATH, "fullclean"])
         # if error == 0 and BUILD_PATH == './creatino' and ACTUAL_TARGET != target_board:
         if error == 0 and ACTUAL_TARGET != target_board:
-            # print("ACTUAL_TARGET: ", ACTUAL_TARGET)
-            print(f"File path: {BUILD_PATH}/sdkconfig")
+            logging.debug(f"File path: {BUILD_PATH}/sdkconfig")
             sdkconfig_path = os.path.join(BUILD_PATH, "sdkconfig")
             # 1. Crear/actualizar sdkconfig.defaults con la frecuencia correcta
             defaults_path = os.path.join(BUILD_PATH, "sdkconfig.defaults")
@@ -826,7 +748,7 @@ def do_flash_request(request):
                         "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE is not set\n"
                         "# CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK is not set\n"
                     )
-            elif target_board == "esp32c6":
+            elif target_board == "esp32c6" or target_board == 'esp32h2':
                 with open(defaults_path, "w") as f:
                     f.write(
                         "CONFIG_FREERTOS_HZ=1000\n"
@@ -866,7 +788,7 @@ def do_flash_request(request):
                             sdkconfig_path,
                         ],
                     )
-                elif target_board == "esp32c6":
+                elif target_board == "esp32c6" or target_board == 'esp32h2':
                     # CONFIG_FREERTOS_HZ=1000
                     do_cmd(
                         req_data,
@@ -888,31 +810,66 @@ def do_flash_request(request):
                         ],
                     )
 
-            # 3. Ahora sí, ejecutar set-target
+            # 3. Execute set-target
             error = do_cmd(
                 req_data, ["idf.py", "-C", BUILD_PATH, "set-target", target_board]
             )
-            if error != 0:
-                raise Exception("No se pudo establecer el target")
-            ACTUAL_TARGET = target_board
-
-        if error == 0:
-            error = do_cmd(req_data, ["idf.py", "-C", BUILD_PATH, "build"])
-        if error == 0:
-            error = do_cmd(
-                req_data, ["idf.py", "-C", BUILD_PATH, "-p", target_device, "flash"]
-            )
-        if error == 0:
-            req_data["status"] += "Flash completed successfully.\n"
+            if error == 0:
+                error = do_cmd(req_data, ["idf.py", "-C", BUILD_PATH, "build"])
+            if error == 0:
+                error = do_cmd(
+                    req_data, ["idf.py", "-C", BUILD_PATH, "-p", target_device, "flash"]
+                )
+            if error == 0:
+                req_data["status"] += "Flash completed successfully.\n"
 
     except Exception as e:
         req_data["status"] += str(e) + "\n"
-        print("Error in do_flash_request: ", str(e))
+        logging.error("Error in do_flash_request: ", str(e))
 
     return jsonify(req_data)
 
 
-# (4) Flasing assembly program into target board
+# (3) Run program into the target board
+def do_monitor_request(request):
+    try:
+        req_data = request.get_json()
+        target_device = req_data["target_port"]
+        req_data["status"] = ""
+        check_build()
+        
+        #Docker check
+        if running_in_docker() and openocd_alive('host.docker.internal', 4444):
+            if not openocd_shutdown('host.docker.internal', 4444):
+                req_data['status'] += "Stop openocd in your local machine\n"
+                return jsonify(req_data)
+
+        if "openocd" in process_holder:
+            logging.debug("Killing OpenOCD")
+            kill_all_processes("openocd")
+            process_holder.pop("openocd", None)
+
+        if "gdbgui" in process_holder:
+            logging.debug("Killing GDBGUI")
+            kill_all_processes("gdbgui")
+            process_holder.pop("gdbgui", None)
+
+        build_root = BUILD_PATH + "/build"
+        error = 0
+        if os.path.isdir(build_root) and os.listdir(build_root):
+            logging.info("Build found")
+        if os.path.isfile(BUILD_PATH +'/sdkconfig') == True:
+            do_cmd(req_data, ['idf.py', "-C", BUILD_PATH, '-p', target_device, 'monitor'])
+        else:
+            req_data['status'] += "No sdkconfig file found. Please, build the project first.\n"
+            logging.error("No sdkconfig found.")
+
+    except Exception as e:
+        req_data["status"] += str(e) + "\n"
+
+    return jsonify(req_data)
+
+# (4) REMOTE LAB FUNCTION: Flash + Monitor
 def do_job_request(request):
     try:
         req_data = request.get_json()
@@ -975,90 +932,12 @@ def do_stop_flash_request(request):
     return jsonify(req_data)
 
 
-def do_stop_monitor_request(request):
-    try:
-        req_data = request.get_json()
-        req_data["status"] = ""
-        print("Killing Monitor")
-        error = kill_all_processes("idf.py")
-        if error == 0:
-            req_data["status"] += "Process stopped\n"
 
-    except Exception as e:
-        req_data["status"] += str(e) + "\n"
-
-    return jsonify(req_data)
 
 
 ###---------- Debug Processs------
 
-
-#  Physical connections check
-def check_uart_connection(board):
-    """Checks UART devices"""
-    # LINUX
-    if board.startswith("/dev/ttyUSB"):
-        devices = glob.glob("/dev/ttyUSB*")
-        logging.debug(f"Found devices: {devices}")
-        if board in devices:
-            logging.info("Found UART.")
-            return 0
-        elif devices:
-            logging.error("Other UART devices found (Is the name OK?).")
-            return 0
-        else:
-            logging.error("NO UART port found.")
-            return 1
-    # WINDOWS
-    elif board.startswith("rfc2217"):
-        try:
-            ser = serial.serial_for_url(board, timeout=1)
-            ser.close()
-            logging.info("Found RFC2217 UART.")
-            return 0
-        except serial.SerialException as e:
-            logging.error(f"NO RFC2217 UART port found: {e}")
-            return 1
-    # MAC
-    elif board.startswith("/dev/cu.usb"):
-        devices = glob.glob("/dev/cu.usb*")
-        logging.debug(f"Found devices: {devices}")
-        if board in devices:
-            logging.info("Found UART.")
-            return 0
-        elif devices:
-            logging.error("Other UART devices found (Is the name OK?).")
-            return 0
-        else:
-            logging.error("NO UART port found.")
-            return 1
-
-
-def check_jtag_connection():
-    """Checks JTAG devices"""
-    command = ["lsusb"]
-    try:
-        lsof = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, errs = lsof.communicate(timeout=5)
-        if output:
-            output_text = output.decode(errors="ignore")
-            if "JTAG" in output_text:
-                logging.info("JTAG found")
-                return True
-            else:
-                logging.warning("JTAG missing")
-                return False
-    except subprocess.TimeoutExpired:
-        lsof.kill()
-        output, errs = lsof.communicate()
-    except Exception as e:
-        logging.error(f"Error checking JTAG: {e}")
-        return None
-    return False
-
-
 # --- Debug Native processes monitoring functions ---
-
 
 def check_gdb_connection():
     """Checks gdb status"""
@@ -1137,10 +1016,10 @@ def kill_all_processes(process_name):
 
         if result.returncode != 0:
             logging.error(
-                f"Error al intentar matar los procesos {process_name}. Salida: {result.stderr.strip()}"
+                f"Error killing processes {process_name}. Salida: {result.stderr.strip()}"
             )
         else:
-            logging.info(f"Todos los procesos '{process_name}' han sido eliminados.")
+            logging.debug(f"Todos los procesos '{process_name}' han sido eliminados.")
 
         return result.returncode
 
@@ -1178,22 +1057,43 @@ def start_openocd_thread(req_data):
 
 
 # -------GDBGUI function
+#  Fix routes with spaces
+def has_spaces_in_paths(gdbinit_path):
+    with open(gdbinit_path, 'r') as f:
+        for line in f:
+            stripped = line.strip()
+            if stripped.startswith('source'):
+                logging.info(f"Checking line: {stripped}")
+                parts = stripped.split(None, 1)
+                if len(parts) == 2:
+                    path = parts[1]
+                    if ' ' in path:
+                        logging.info(f"Path with spaces found: {path}")
+                        return True
+    logging.info(f"No spaces found in paths.")
+    return False
+
 def start_gdbgui(req_data):
     target_device = req_data["target_port"]
     route = os.path.join(BUILD_PATH, "gdbinit")
     logging.debug(f"GDB route: {route}")
     route = os.path.join(BUILD_PATH, "gdbinit")
-    if os.path.exists(route) and os.path.exists("./gbdscript.gdb"):
-        logging.debug(f"GDB route: {route} exists.")
+    if os.path.exists(route) and os.path.exists(BUILD_PATH +   "/gbdscript.gdb"):
+        logging.info(f"GDB route: {route} exists.")
     else:
         logging.error(f"GDB route: {route} does not exist.")
         req_data["status"] += f"GDB route: {route} does not exist.\n"
         return jsonify(req_data)
     req_data["status"] = ""
-    if check_uart_connection(target_device) != 0:
-        req_data["status"] += f"No UART found\n"
+    # Fix route if needed
+    real_gdbinit_path = os.path.join(BUILD_PATH, 'build', 'gdbinit','gdbinit')
+    logging.info(f"GDBINIT route: {real_gdbinit_path}")
+    if has_spaces_in_paths(real_gdbinit_path):
+        # fix_gdbinit_paths_inplace(real_gdbinit_path)
+        req_data['status'] += f"Route with spaces will break GDBGUI.Please use a directory without spaces\n"
+        logging.error(f"Route with spaces will break GDBGUI.Please use a directory without spaces\n")
         return jsonify(req_data)
-
+    
     logging.info("Starting GDBGUI...")
     gdbgui_cmd = ["idf.py", "-C", BUILD_PATH, "gdbgui", "--gdbinit", route, "monitor"]
     time.sleep(5)
@@ -1257,30 +1157,32 @@ def openocd_alive(host="localhost", port=4444, timeout=1):
 
 # TODO: Check gdbinit archives when using arduino in docker
 def start_gdbgui_remote(req_data):
-    global BUILD_PATH
-    target_device = req_data["target_port"]: 
+    # check arduinoCheck
+    check_build()
+    target_device = req_data["target_port"] 
     route = os.path.join(BUILD_PATH, "gdbinit_win")
     if not (os.path.exists(route) and os.path.exists("./gbdscript_windows.gdb")):
-        logging.error(f"GDB route: {route} or gbdscript_windows.gdb does not exist.")
+        logging.error(f"GDB route: {route} does not exist.")
         req_data[
             "status"
-        ] += f"GDB route: {route} or gbdscript_windows.gdb does not exist.\n"
+        ] += f"GDB route: {route}  does not exist.\n"
         return jsonify(req_data)
 
     logging.info("Starting GDBGUI remote...")
     req_data["status"] = ""
 
+
     gdbgui_cmd = [
         "gdbgui",
         "-g",
-        "riscv32-esp-elf-gdb build/hello_world.elf -x gdbinit_win",
+        f"riscv32-esp-elf-gdb {BUILD_PATH}/build/hello_world.elf -x {BUILD_PATH}/gdbinit_win",
         "--host",
         "0.0.0.0",
         "--port",
         "5000",
         "--no-browser",
     ]
-    idf_cmd = ["idf.py", "-p", target_device, "monitor"]
+    idf_cmd = ["idf.py", "-C", BUILD_PATH, "-p", target_device, "monitor"]
 
     try:
         # Lanzar gdbgui en background
@@ -1338,6 +1240,10 @@ def do_debug_request(request):
         req_data = request.get_json()
         target_device = req_data["target_port"]
         req_data["status"] = ""
+        #CREATINO
+        global BUILD_PATH
+        BUILD_PATH = "./creator"
+        error = check_build()
         # (1.)Check .elf files in BUILD_PATH
         route = BUILD_PATH + "/build"
         logging.debug(f"Checking for ELF files in {route}")
@@ -1350,10 +1256,6 @@ def do_debug_request(request):
 
         if running_in_docker() == True:
             logging.info("Running inside Docker.")
-            # Check UART
-            if check_uart_connection(target_device) != 0:
-                req_data["status"] += f"No UART found\n"
-                return jsonify(req_data)
             # Check if Openocd  is connected in host
             if not openocd_alive("host.docker.internal", 4444):
                 req_data["status"] += "OpenOCD not found in host."
@@ -1370,14 +1272,6 @@ def do_debug_request(request):
                 logging.debug("Killing OpenOCD")
                 kill_all_processes("openocd")
                 process_holder.pop("openocd", None)
-            # Check UART
-            if check_uart_connection(target_device) != 0:
-                req_data["status"] += f"No UART found\n"
-                return jsonify(req_data)
-            # Check if JTAG is connected
-            if not check_jtag_connection():
-                req_data["status"] += "No JTAG found\n"
-                return jsonify(req_data)
 
             # Start OpenOCD
             logging.info("Starting OpenOCD...")

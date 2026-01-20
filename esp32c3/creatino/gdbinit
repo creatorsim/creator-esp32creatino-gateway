@@ -1,2 +1,2 @@
-source ./build/gdbinit/symbols
-source ./gbdscript _creatino.gdb
+source ./creatino/build/gdbinit/symbols
+source ./creatino/gbdscript_creatino.gdb

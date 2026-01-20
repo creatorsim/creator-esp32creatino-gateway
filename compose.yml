@@ -1,0 +1,17 @@
+services:
+  creator-gateway-esp32:
+    build:
+      context: .
+      target: prod
+    ports:
+      - "8080:8080" # gateway
+      - "5000:5000" # gdbgui
+    stdin_open: true
+    tty: true
+    devices:
+      - /dev/ttyUSB0
+      # - /dev/cu.usbserial-10 # MacOS
+    # for debug
+    network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
