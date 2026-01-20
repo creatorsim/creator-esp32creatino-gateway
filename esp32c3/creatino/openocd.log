@@ -1,0 +1,463 @@
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Error: libusb_get_string_descriptor_ascii() failed with -1
+/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg:9: Error:
+at file "/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg", line 9
+Error: [esp32c3] Unsupported DTM version: -1
+Error: [esp32c3] Could not identify target type.
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Error: esp_usb_jtag: could not find or open device!
+/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg:9: Error:
+at file "/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg", line 9
+Error: [esp32c3] Unsupported DTM version: -1
+Error: [esp32c3] Could not identify target type.
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Error: esp_usb_jtag: could not find or open device!
+/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg:9: Error:
+at file "/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg", line 9
+Error: [esp32c3] Unsupported DTM version: -1
+Error: [esp32c3] Could not identify target type.
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Error: esp_usb_jtag: could not find or open device!
+/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg:9: Error:
+at file "/home/elisa/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts/target/esp_common.cfg", line 9
+Error: [esp32c3] Unsupported DTM version: -1
+Error: [esp32c3] Could not identify target type.
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Error: esp_usb_jtag: device not found!
+Error: esp_usb_jtag: failed to revive USB device!
+Error: missing data from bitq interface
+Error: dmi_scan failed jtag scan
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Error: esp_usb_jtag: device not found!
+Error: esp_usb_jtag: failed to revive USB device!
+Error: missing data from bitq interface
+Error: failed jtag scan: -104
+Error: [esp32c3] Failed DMI read at 0x11; status=2
+Error: [esp32c3] polling failed!
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Error: missing data from bitq interface
+Error: dmi_scan failed jtag scan
+Error: [esp32c3] Failed DMI read at 0x11; status=2
+Error: [esp32c3] polling failed!
+Info : [esp32c3] Hart unexpectedly reset!
+Info : [esp32c3] Reset cause (1) - (Chip reset)
+Info : accepting 'gdb' connection on tcp/3333
+Info : [esp32c3] Target halted, PC=0x403893A4, debug_reason=00000000
+Warn : No symbols for FreeRTOS!
+Info : [esp32c3] Found 8 triggers
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Auto-detected flash bank 'esp32c3.flash' size 4096 KB
+Info : Using flash bank 'esp32c3.flash' size 4096 KB
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Using flash bank 'esp32c3.irom' size 188 KB
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Using flash bank 'esp32c3.drom' size 60 KB
+Info : Detected FreeRTOS version: (10.5.1)
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Detected FreeRTOS version: (10.5.1)
+Info : [esp32c3] Target halted, PC=0x42009FD0, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A01A, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A01C, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A01E, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A0CE, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A022, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A02C, debug_reason=00000004
+Info : dropped 'gdb' connection
+Info : accepting 'gdb' connection on tcp/3333
+Info : [esp32c3] Target halted, PC=0x42014A3A, debug_reason=00000000
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Detected FreeRTOS version: (10.5.1)
+Info : [esp32c3] Target halted, PC=0x42009FD0, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A01A, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A01C, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A01E, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A0CE, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A022, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A02C, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A02E, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A030, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A122, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Info : [esp32c3] Target halted, PC=0x4200A034, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A036, debug_reason=00000004
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+shutdown command invoked
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+shutdown command invoked
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+shutdown command invoked
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Error: libusb_open() failed with LIBUSB_ERROR_NO_DEVICE
+Error: esp_usb_jtag: device not found!
+Error: esp_usb_jtag: failed to revive USB device!
+Error: missing data from bitq interface
+Error: dmi_scan failed jtag scan
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Error: libusb_open() failed with LIBUSB_ERROR_NO_DEVICE
+Error: esp_usb_jtag: device not found!
+Error: esp_usb_jtag: failed to revive USB device!
+Error: missing data from bitq interface
+Error: failed jtag scan: -104
+Error: [esp32c3] Failed DMI read at 0x11; status=2
+Error: [esp32c3] polling failed!
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Error: missing data from bitq interface
+Error: dmi_scan failed jtag scan
+Error: [esp32c3] Failed DMI read at 0x11; status=2
+Error: [esp32c3] polling failed!
+Info : [esp32c3] Hart unexpectedly reset!
+Info : [esp32c3] Reset cause (1) - (Chip reset)
+Info : accepting 'gdb' connection on tcp/3333
+Info : [esp32c3] Target halted, PC=0x403875DC, debug_reason=00000000
+Warn : No symbols for FreeRTOS!
+Info : [esp32c3] Found 8 triggers
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Auto-detected flash bank 'esp32c3.flash' size 4096 KB
+Info : Using flash bank 'esp32c3.flash' size 4096 KB
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Using flash bank 'esp32c3.irom' size 188 KB
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Using flash bank 'esp32c3.drom' size 60 KB
+Info : Detected FreeRTOS version: (10.5.1)
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Detected FreeRTOS version: (10.5.1)
+Info : [esp32c3] Target halted, PC=0x42009FD0, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A01A, debug_reason=00000004
+Info : dropped 'gdb' connection
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Info : clock speed 40000 kHz
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] datacount=2 progbufsize=16
+Info : [esp32c3] Examined RISC-V core; found 1 harts
+Info : [esp32c3]  XLEN=32, misa=0x40101104
+Info : [esp32c3] Examination succeed
+Info : [esp32c3] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Error: esp_usb_jtag: device not found!
+Error: esp_usb_jtag: failed to revive USB device!
+Error: missing data from bitq interface
+Error: dmi_scan failed jtag scan
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Info : esp_usb_jtag: serial (58:CF:79:16:81:90)
+Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+Error: missing data from bitq interface
+Error: failed jtag scan: -104
+Error: [esp32c3] Failed DMI read at 0x11; status=2
+Error: [esp32c3] polling failed!
+Error: [esp32c3] Failed DMI read at 0x11; status=1
+Error: [esp32c3] polling failed!
+Info : [esp32c3] Hart unexpectedly reset!
+Info : [esp32c3] Reset cause (1) - (Chip reset)
+Info : accepting 'gdb' connection on tcp/3333
+Info : [esp32c3] Target halted, PC=0x40383CF2, debug_reason=00000000
+Warn : No symbols for FreeRTOS!
+Info : [esp32c3] Found 8 triggers
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Auto-detected flash bank 'esp32c3.flash' size 4096 KB
+Info : Using flash bank 'esp32c3.flash' size 4096 KB
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Using flash bank 'esp32c3.irom' size 188 KB
+Info : Flash mapping 0: 0x10020 -> 0x3c030020, 59 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 184 KB
+Info : Using flash bank 'esp32c3.drom' size 60 KB
+Info : Detected FreeRTOS version: (10.5.1)
+Info : JTAG tap: esp32c3.tap0 tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+Info : [esp32c3] Reset cause (3) - (Software core reset)
+Info : Detected FreeRTOS version: (10.5.1)
+Info : [esp32c3] Target halted, PC=0x42009FD0, debug_reason=00000001
+Info : [esp32c3] Target halted, PC=0x4200A01A, debug_reason=00000004
+Info : dropped 'gdb' connection

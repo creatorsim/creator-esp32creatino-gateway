@@ -1,2 +1,2 @@
 source ./creator/build/gdbinit/symbols
-source ./creator/gbdscript_windows.gdb
+source ./creator/gdbscript_windows.gdb

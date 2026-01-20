@@ -562,7 +562,7 @@ def do_stop_monitor_request(request):
     try:
         req_data = request.get_json()
         req_data["status"] = ""
-        print("Killing Monitor")
+        logging.debug("Killing Monitor")
         error = kill_all_processes("idf.py")
         if error == 0:
             req_data["status"] += "Process stopped\n"
@@ -583,11 +583,14 @@ def do_get_form(request):
 # **Arduino mode checkbox handling**
 def do_arduino_mode(request):
     req_data = request.get_json()
-    statusChecker = req_data.get("arduino_support")
-    req_data["status"] = ""
+
+    statusChecker = req_data.get("state", "")
+    logging.debug(f"Checkbox value received: {statusChecker} of type {type(statusChecker)}") 
+
     global arduino
-    arduino = not statusChecker
-    print(f"Estado checkbox: {arduino} de tipo {type(statusChecker)}")
+    arduino = bool(statusChecker)
+
+    logging.debug(f"Estado checkbox: {arduino} de tipo {type(statusChecker)}")
     return req_data
 
 
@@ -600,7 +603,7 @@ def check_build():
             BUILD_PATH = "./creator"
         return 0
     except Exception as e:
-        print("Error adapting assembly file: ", str(e))
+        logging.error("Error adapting assembly file: ", str(e))
         return -1
 
 
@@ -655,10 +658,10 @@ def creator_build(file_in, file_out):
         return 0
 
     except CrFunctionNotAllowed:
-        print("Error: cr_ functions are not supported in this mode.")
+        logging.error("Error: cr_ functions are not supported in this mode.")
         return 2
     except Exception as e:
-        print("Error adapting assembly file: ", str(e))
+        logging.error("Error adapting assembly file: ", str(e))
         return -1
 
 def do_cmd(req_data, cmd_array):
@@ -857,7 +860,7 @@ def do_monitor_request(request):
         build_root = BUILD_PATH + "/build"
         error = 0
         if os.path.isdir(build_root) and os.listdir(build_root):
-            logging.info("Build found")
+            logging.debug("Build found")
         if os.path.isfile(BUILD_PATH +'/sdkconfig') == True:
             do_cmd(req_data, ['idf.py', "-C", BUILD_PATH, '-p', target_device, 'monitor'])
         else:
@@ -1040,7 +1043,7 @@ def kill_all_processes(process_name):
 def start_openocd_thread(req_data):
     target_board = req_data["target_board"]
     route = BUILD_PATH + "/openocd_scripts/openscript_" + target_board + ".cfg"
-    logging.info(f"OpenOCD route: {route}")
+    logging.debug(f"OpenOCD route: {route}")
     try:
         thread = threading.Thread(
             target=monitor_openocd_output,
@@ -1063,31 +1066,37 @@ def has_spaces_in_paths(gdbinit_path):
         for line in f:
             stripped = line.strip()
             if stripped.startswith('source'):
-                logging.info(f"Checking line: {stripped}")
+                logging.debug(f"Checking line: {stripped}")
                 parts = stripped.split(None, 1)
                 if len(parts) == 2:
                     path = parts[1]
                     if ' ' in path:
-                        logging.info(f"Path with spaces found: {path}")
+                        logging.debug(f"Path with spaces found: {path}")
                         return True
-    logging.info(f"No spaces found in paths.")
+    logging.debug(f"No spaces found in paths.")
     return False
 
 def start_gdbgui(req_data):
-    target_device = req_data["target_port"]
     route = os.path.join(BUILD_PATH, "gdbinit")
-    logging.debug(f"GDB route: {route}")
-    route = os.path.join(BUILD_PATH, "gdbinit")
-    if os.path.exists(route) and os.path.exists(BUILD_PATH +   "/gbdscript.gdb"):
-        logging.info(f"GDB route: {route} exists.")
+    logging.debug(f"GDBinit route: {route}")
+    # Cases if its creatino or creator module
+    if BUILD_PATH == "./creatino":
+        route_script = os.path.join(BUILD_PATH, "gdbscript_creatino.gdb")
+        logging.debug(f"GDB script route for creatino: {route_script}")
+    else:
+        route_script = os.path.join(BUILD_PATH, "gdbscript.gdb") 
+        logging.debug(f"GDB script route for creator: {route_script}")
+    #Check scripts
+    if os.path.exists(route) and os.path.exists(route_script):
+        logging.debug(f"GDB route: {route} exists.")
     else:
         logging.error(f"GDB route: {route} does not exist.")
         req_data["status"] += f"GDB route: {route} does not exist.\n"
         return jsonify(req_data)
-    req_data["status"] = ""
-    # Fix route if needed
+    
+    # Check routes with spaces
     real_gdbinit_path = os.path.join(BUILD_PATH, 'build', 'gdbinit','gdbinit')
-    logging.info(f"GDBINIT route: {real_gdbinit_path}")
+    logging.debug(f"GDBINIT route: {real_gdbinit_path}")
     if has_spaces_in_paths(real_gdbinit_path):
         # fix_gdbinit_paths_inplace(real_gdbinit_path)
         req_data['status'] += f"Route with spaces will break GDBGUI.Please use a directory without spaces\n"
@@ -1152,7 +1161,7 @@ def openocd_alive(host="localhost", port=4444, timeout=1):
     except (socket.timeout, ConnectionRefusedError, OSError):
         return False
     except Exception as e:
-        print(f"Error inesperado: {e}")
+        logging.error(f"Unexpected error: {e}")
         return False
 
 # TODO: Check gdbinit archives when using arduino in docker
@@ -1161,7 +1170,15 @@ def start_gdbgui_remote(req_data):
     check_build()
     target_device = req_data["target_port"] 
     route = os.path.join(BUILD_PATH, "gdbinit_win")
-    if not (os.path.exists(route) and os.path.exists("./gbdscript_windows.gdb")):
+    # Cases if its creatino or creator module
+    if BUILD_PATH == "./creatino":
+        route_script = os.path.join(BUILD_PATH, "gdbscript_creatino_windows.gdb")
+        logging.debug(f"GDB script route for creatino: {route_script}")
+    else:
+        route_script = os.path.join(BUILD_PATH, "gdbscript_windows.gdb") 
+        logging.debug(f"GDB script route for creator: {route_script}")
+
+    if not (os.path.exists(route) and os.path.exists(route_script)):
         logging.error(f"GDB route: {route} does not exist.")
         req_data[
             "status"
@@ -1189,7 +1206,7 @@ def start_gdbgui_remote(req_data):
         process_holder["gdbgui"] = subprocess.Popen(
             gdbgui_cmd, stdout=sys.stdout, stderr=sys.stderr, text=True
         )
-        logging.info("gdbgui started, PID: %d", process_holder["gdbgui"].pid)
+        logging.debug("gdbgui started, PID: %d", process_holder["gdbgui"].pid)
 
         # Ejecutar idf.py monitor y esperar a que termine
         idf_proc = subprocess.run(
